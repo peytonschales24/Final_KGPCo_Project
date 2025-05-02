@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NTIA News Scraper (JS)</title>
+
+  <!-- Pico CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <!-- DataTables CSS (jQuery version) -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+
+  <style>
+    body { background-color: #f5f7fa; }
+    header { margin-bottom: 2rem;}
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem}
+    button { margin-top: 1rem; }
+    #output-table table { width: 100%; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <header class="container">
+    <h1 style="color: black;">Scraped Websites (JavaScript)</h1>
+    <p>Click the button to fetch the latest 10 articles via JavaScript <em>fetch</em> and display them in a DataTable.</p>
+  </header>
+
+  <main class="container">
+    <button id="fetch-btn" class="contrast">Fetch Latest News</button>
+    <section id="output-table"></section>
+  </main>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- DataTables JS (jQuery version) -->
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+  <script>
+    async function fetchNews() {
+      const url = 'https://broadbandusa.ntia.gov/news/latest-news';
+      const proxy = 'https://api.allorigins.win/raw?url=';
+      try {
+        const response = await fetch(proxy + encodeURIComponent(url));
+        if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+        const htmlText = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+        const containers = Array.from(doc.querySelectorAll('div.views-row')).slice(0, 10);
+
+        const rows = containers.map(c => {
+          const titleEl = c.querySelector('span.field-content');
+          const title = titleEl?.textContent.trim() || '';
+          const link = titleEl?.querySelector('a')?.href || '';
+          const fullUrl = link.startsWith('http') ? link : 'https://broadbandusa.ntia.gov' + link;
+          let dateText = c.querySelector('.views-field-created .field-content')?.textContent.trim() || 'No Date';
+          if (!/^\w+ \d{1,2}, \d{4}$/.test(dateText)) dateText = 'Invalid Date';
+          return { title, url: `<a href="${fullUrl}" target="_blank">Link</a>`, date: dateText };
+        });
+
+        const tableHtml = `
+          <table id="news-table" class="display stripe">
+            <thead>
+              <tr><th>Title</th><th>URL</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+              ${rows.map(r => `<tr><td>${r.title}</td><td>${r.url}</td><td>${r.date}</td></tr>`).join('')}
+            </tbody>
+          </table>`;
+        $('#output-table').html(tableHtml);
+        $('#news-table').DataTable({
+          order: [[2, 'desc']]
+        });
+      } catch (err) {
+        $('#output-table').html(`<pre style="color:crimson">${err}</pre>`);
+      }
+    }
+
+    $('#fetch-btn').on('click', fetchNews);
+  </script>
+</body>
+</html>
