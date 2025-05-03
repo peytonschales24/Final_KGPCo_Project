@@ -1,299 +1,81 @@
-#!/usr/bin/env python3
-"""
-news_app.py  – one‑file scraper + Flask UI
-------------------------------------------
-• GET /api/news  → JSON list of latest headlines (≤90 days old)
-• GET /          → HTML UI that calls the API and shows a DataTable
-"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Broadband / Tech Headlines</title>
 
-from __future__ import annotations
-import requests, certifi, pandas as pd
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-from typing import List, Dict, Callable, Optional
-from flask import Flask, jsonify, Response
+  <!-- Pico CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <!-- DataTables CSS (jQuery version) -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
-# ────────────────────────── CONFIG ────────────────────────── #
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/129.0.0.0 Safari/537.36"
-    )
-}
-N_ARTICLES   = 10
-TIMEOUT      = 30
-TODAY        = datetime.utcnow().date()
-CUTOFF_DATE  = TODAY - timedelta(days=90)
+  <style>
+    body   { background:#f5f7fa; }
+    header { max-width:1200px; margin:auto; padding:2rem; }
+    main   { max-width:1200px; margin:auto; padding:2rem; }
+    #news-table { width:100%; margin-top:1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 style="color:black;">Scraped Broadband / Tech Headlines</h1>
+    <p>Click to fetch the latest articles (all 13 sources, past&nbsp;90 days).</p>
+    <button id="fetch-btn" class="contrast">Fetch Latest News</button>
+  </header>
 
-# ────────────────────────── HELPERS ───────────────────────── #
-def _get(url: str) -> Optional[BeautifulSoup]:
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=TIMEOUT, verify=certifi.where())
-        r.raise_for_status()
-        return BeautifulSoup(r.text, "html.parser")
-    except requests.RequestException as exc:
-        print(f"⚠️  {url} – {exc}")
-        return None
+  <main>
+    <section id="output-table"></section>
+  </main>
 
-def _try_parse(raw: str, *fmts: str) -> Optional[datetime.date]:
-    raw = raw.strip()
-    for f in fmts:
-        try:
-            return datetime.strptime(raw, f).date()
-        except ValueError:
-            continue
-    return None
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- DataTables JS (jQuery version) -->
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-def _record(**kw) -> Dict:
-    base = dict(source=None, article_title=None,
-                article_url=None, article_date=None,
-                author=None, excerpt=None)
-    base.update(kw)
-    return base
+  <script>
+    async function fetchNews() {
+      $('#fetch-btn').prop('disabled', true).text('Loading…');
 
-def _keep(date: Optional[datetime.date]) -> bool:
-    return date is not None and date >= CUTOFF_DATE
+      try {
+        // <-- NEW: grab pre‑scraped JSON from the Flask backend
+        const res = await fetch('http://localhost:8000/api/news');
+        if (!res.ok) throw new Error('API error ' + res.status);
+        const rows = await res.json();   // [{source, article_title, …}, …]
 
-# ──────────────────── 13 SITE‑SPECIFIC SCRAPERS ──────────────────── #
-# (exactly your functions, shortened comments to save space)
+        // Build DataTable
+        const tableHtml = `
+          <table id="news-table" class="display stripe">
+            <thead>
+              <tr>
+                <th>Source</th><th>Title</th><th>Date</th><th>Link</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(r => `
+                <tr>
+                  <td>${r.source}</td>
+                  <td>${r.article_title}</td>
+                  <td>${r.article_date}</td>
+                  <td><a href="${r.article_url}" target="_blank">🔗</a></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>`;
+        $('#output-table').html(tableHtml);
+        $('#news-table').DataTable({ order:[[2,'desc']] });
 
-def scrape_ntia() -> List[Dict]:
-    soup = _get("https://broadbandusa.ntia.gov/news/latest-news")
-    if not soup: return []
-    out=[]
-    for row in soup.select("div.views-row")[:N_ARTICLES]:
-        a=row.select_one("span.field-content a")
-        d=_try_parse(row.select_one("div.views-field-created span.field-content").text,"%B %d, %Y") if row.select_one("div.views-field-created span.field-content") else None
-        if a and _keep(d):
-            out.append(_record(source="NTIA",article_title=a.text.strip(),
-                               article_url="https://broadbandusa.ntia.gov"+a["href"],article_date=d))
-    return out
+      } catch (err) {
+        $('#output-table').html(`<pre style="color:crimson">${err}</pre>`);
+      } finally {
+        $('#fetch-btn').prop('disabled', false).text('Fetch Latest News');
+      }
+    }
 
-def scrape_theverge()->List[Dict]:
-    soup=_get("https://www.theverge.com/"); out=[]
-    if not soup:return out
-    for card in soup.select("article")[:N_ARTICLES]:
-        a=card.select_one("a[data-analytics-link]")
-        time=card.select_one("time")
-        d=_try_parse(time.get("datetime",""),"%Y-%m-%d") if time else None
-        if a and _keep(d):
-            link=a["href"]; 
-            if not link.startswith("http"): link="https://www.theverge.com"+link
-            out.append(_record(source="The Verge",article_title=a.text.strip(),
-                               article_url=link,article_date=d))
-    return out
-
-def scrape_telecompetitor()->List[Dict]:
-    soup=_get("https://www.telecompetitor.com/articles/");out=[]
-    if not soup:return out
-    for art in soup.select("article")[:N_ARTICLES]:
-        a=art.select_one("h2.wp-block-post-title a"); t=art.select_one("time")
-        d=_try_parse(t.text,"%B %d, %Y") if t else None
-        if a and _keep(d):
-            out.append(_record(source="Telecompetitor",article_title=a.text.strip(),
-                               article_url=a["href"],article_date=d))
-    return out
-
-def scrape_networkworld()->List[Dict]:
-    soup=_get("https://www.networkworld.com/news/");out=[]
-    if not soup:return out
-    for card in soup.select("div.card")[:N_ARTICLES]:
-        h3=card.select_one("h3.card__title"); a=card.select_one("a"); t=card.select_one("time")
-        d=_try_parse(t.get("datetime",""),"%Y-%m-%d") if t else None
-        if h3 and a and _keep(d):
-            link=a["href"]; 
-            if not link.startswith("http"): link="https://www.networkworld.com"+link
-            out.append(_record(source="Network World",article_title=h3.text.strip(),
-                               article_url=link,article_date=d))
-    return out
-
-def scrape_lightreading()->List[Dict]:
-    soup=_get("https://www.lightreading.com");out=[]
-    if not soup:return out
-    for div in soup.select("div.ArticlePreview")[:N_ARTICLES]:
-        tit=div.select_one("div.ArticlePreview__Title"); t=div.select_one("span.ArticlePreview__Date")
-        d=_try_parse(t.text,"%b %d, %Y") if t else None
-        a=div.find("a"); link=a["href"] if a else ""
-        if link.startswith("/"): link="https://www.lightreading.com"+link
-        if tit and _keep(d):
-            out.append(_record(source="Light Reading",article_title=tit.text.strip(),
-                               article_url=link,article_date=d))
-    return out
-
-def scrape_broadbandnow()->List[Dict]:
-    soup=_get("https://broadbandnow.com/research");out=[]
-    if not soup:return out
-    for card in soup.select("div.card.research")[:N_ARTICLES]:
-        a=card.select_one("h2.card-title"); link=card.select_one("a.thumbnail")
-        t=card.select_one("p.card-updated-date")
-        d=_try_parse(t.text,"%B %d, %Y") if t else None
-        if a and link and _keep(d):
-            out.append(_record(source="BroadbandNow",article_title=a.text.strip(),
-                               article_url=link["href"],article_date=d))
-    return out
-
-def scrape_rcrwireless()->List[Dict]:
-    soup=_get("https://www.rcrwireless.com/");out=[]
-    if not soup:return out
-    for block in soup.select("div.td-module-thumb")[:N_ARTICLES]:
-        ttl=block.find_next("h3",class_="entry-title")
-        lnk=ttl.find("a") if ttl else None
-        dt=block.find_next("time",class_="entry-date")
-        d=_try_parse(dt.get("datetime",""),"%Y-%m-%d") if dt else None
-        if ttl and lnk and _keep(d):
-            out.append(_record(source="RCR Wireless",article_title=ttl.text.strip(),
-                               article_url=lnk["href"],article_date=d))
-    return out
-
-def scrape_lightwave()->List[Dict]:
-    soup=_get("https://www.lightwaveonline.com/broadband");out=[]
-    if not soup:return out
-    for a in soup.select("a.title-wrapper")[:N_ARTICLES]:
-        p=a.find_parent("div"); dt=p.find_next("div",class_="date") if p else None
-        d=_try_parse(dt.text,"%b %d, %Y") if dt else None
-        link=a["href"]; 
-        if link.startswith("/"): link="https://www.lightwaveonline.com"+link
-        if _keep(d):
-            out.append(_record(source="Lightwave Online",article_title=a.text.strip(),
-                               article_url=link,article_date=d))
-    return out
-
-def scrape_advanced_tv()->List[Dict]:
-    soup=_get("https://www.advanced-television.com/?s=broadband");out=[]
-    if not soup:return out
-    for art in soup.select("article.text-secondary")[:N_ARTICLES]:
-        a=art.select_one("a.text-dark"); sd=art.select_one("div.border span")
-        d=_try_parse(sd.text,"%B %d, %Y") if sd else None
-        link=a["href"] if a else ""
-        if link.startswith("/"): link="https://www.advanced-television.com"+link
-        if a and _keep(d):
-            out.append(_record(source="Advanced TV",article_title=a.text.strip(),
-                               article_url=link,article_date=d))
-    return out
-
-def scrape_cnet()->List[Dict]:
-    soup=_get("https://www.cnet.com/search/?searchQuery=broadband");out=[]
-    if not soup:return out
-    for art in soup.select("article.c-pageSearch_searchResult")[:N_ARTICLES]:
-        a=art.select_one("a.c-pageSearch_searchResultUrlContainer"); t=art.select_one("time")
-        d=_try_parse(t.get("datetime",""),"%Y-%m-%d") if t else None
-        link=a["href"] if a else ""
-        if link.startswith("/"): link="https://www.cnet.com"+link
-        if a and _keep(d):
-            out.append(_record(source="CNET",article_title=a.text.strip(),
-                               article_url=link,article_date=d))
-    return out
-
-def scrape_fiberoptics()->List[Dict]:
-    soup=_get("https://www.fiberopticsonline.com/hub/bucket/homelatestheadlines");out=[]
-    if not soup:return out
-    for li in soup.select("li.mb-2.vm-summary-link")[:N_ARTICLES]:
-        a=li.find("a"); dt=li.find("em",class_="vm-hub-date")
-        d=_try_parse(dt.text,"%b %d, %Y") if dt else None
-        link=a["href"] if a else ""
-        if link.startswith("/"): link="https://www.fiberopticsonline.com"+link
-        if a and _keep(d):
-            out.append(_record(source="Fiber Optics Online",article_title=a.text.strip(),
-                               article_url=link,article_date=d))
-    return out
-
-def scrape_techradar()->List[Dict]:
-    soup=_get("https://www.techradar.com/search?searchTerm=broadband");out=[]
-    if not soup:return out
-    for art in soup.select("article.search-result")[:N_ARTICLES]:
-        h3=art.select_one("h3.article-name"); a=art.select_one("a.article-link")
-        t=art.select_one("time.no-wrap.relative-date.date-with-prefix")
-        d=_try_parse(t.get("datetime",""),"%Y-%m-%d") if t else None
-        link=a["href"] if a else ""
-        if link.startswith("/"): link="https://www.techradar.com"+link
-        if h3 and _keep(d):
-            out.append(_record(source="TechRadar",article_title=h3.text.strip(),
-                               article_url=link,article_date=d))
-    return out
-
-# Broadband.io JSON feed
-_BBIO_API="https://www.broadband.io/api/v1/content/get-broadband-grant-alerts-news?page=1"
-def scrape_broadbandio()->List[Dict]:
-    try:
-        resp=requests.get(_BBIO_API,timeout=15,verify=certifi.where());resp.raise_for_status()
-        payload=resp.json()
-    except Exception as e:
-        print("⚠️ Broadband.io API:",e); return []
-    out=[]
-    for post in payload.get("data",[])[:N_ARTICLES]:
-        try:
-            d=datetime.fromisoformat(post["published_at"].replace("Z","+00:00")).date()
-        except Exception: continue
-        if not _keep(d): continue
-        link=f"https://www.broadband.io{post.get('slug','')}"
-        out.append(_record(source="Broadband.io",article_title=post.get("title","Untitled").strip(),
-                           article_url=link,article_date=d))
-    return out
-
-# ──────────────────── RUN ALL SCRAPERS ──────────────────── #
-SCRAPERS: List[Callable[[], List[Dict]]] = [
-    scrape_ntia, scrape_theverge, scrape_telecompetitor, scrape_networkworld,
-    scrape_lightreading, scrape_broadbandnow, scrape_rcrwireless,
-    scrape_lightwave, scrape_advanced_tv, scrape_cnet, scrape_fiberoptics,
-    scrape_techradar, scrape_broadbandio,
-]
-
-def scrape_all()->pd.DataFrame:
-    rows=[]
-    for fn in SCRAPERS:
-        rows.extend(fn())
-    df=pd.DataFrame.from_records(rows)
-    return df.sort_values("article_date",ascending=False).reset_index(drop=True)
-
-# ────────────────────────── FLASK APP ────────────────────────── #
-app=Flask(__name__)
-
-HTML_PAGE="""<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Broadband / Tech Headlines</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
-<style>body{background:#f5f7fa;}header,main{max-width:1200px;margin:auto;padding:2rem;}#news-table{width:100%;margin-top:1rem;}</style>
-</head><body>
-<header><h1 style="color:black">Scraped Broadband / Tech Headlines</h1>
-<p>Data scraped server‑side (last 90 days). Click to refresh.</p>
-<button id="fetch-btn" class="contrast">Fetch Latest News</button></header>
-<main><section id="output-table"></section></main>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script>
-async function fetchNews(){
-  $('#fetch-btn').prop('disabled',true).text('Loading…');
-  try{
-    const res=await fetch('/api/news'); if(!res.ok) throw new Error(res.status);
-    const rows=await res.json();
-    const html=`<table id="news-table" class="display stripe">
-      <thead><tr><th>Source</th><th>Title</th><th>Date</th><th>Link</th></tr></thead>
-      <tbody>${
-        rows.map(r=>`<tr><td>${r.source}</td><td>${r.article_title}</td>
-        <td>${r.article_date}</td><td><a href="${r.article_url}" target="_blank">🔗</a></td></tr>`).join('')
-      }</tbody></table>`;
-    $('#output-table').html(html);
-    $('#news-table').DataTable({order:[[2,'desc']]});
-  }catch(e){
-    $('#output-table').html('<pre style="color:crimson">'+e+'</pre>');
-  }finally{
-    $('#fetch-btn').prop('disabled',false).text('Fetch Latest News');
-  }
-}
-$('#fetch-btn').on('click',fetchNews);
-</script></body></html>"""
-
-@app.route("/")
-def index()->Response:
-    return Response(HTML_PAGE,mimetype="text/html")
-
-@app.route("/api/news")
-def api_news():
-    df=scrape_all()
-    return jsonify(df.assign(article_date=df["article_date"].astype(str)).to_dict("records"))
-
-# ─────────────────────────── MAIN ─────────────────────────── #
-if __name__=="__main__":
-    app.run(debug=True,port=8000)
+    $('#fetch-btn').on('click', fetchNews);
+  </script>
+</body>
+</html>
+    $('#fetch-btn').on('click', fetchNews);
+  </script>
+</body>
+</html>
