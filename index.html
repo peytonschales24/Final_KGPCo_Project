@@ -1,81 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Broadband / Tech Headlines</title>
+<meta charset="UTF-8" />
+<title>Broadband‑News Dashboard</title>
 
-  <!-- Pico CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <!-- DataTables CSS (jQuery version) -->
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<!-- date helper -->
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
 
-  <style>
-    body   { background:#f5f7fa; }
-    header { max-width:1200px; margin:auto; padding:2rem; }
-    main   { max-width:1200px; margin:auto; padding:2rem; }
-    #news-table { width:100%; margin-top:1rem; }
-  </style>
+<style>
+  :root{
+    --bg:#f7f9fc;
+    --card:#ffffff;
+    --accent:#0057b7;
+    --accent-light:#e9f1ff;
+    --border:#d7e0ea;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font:400 16px/1.4 system-ui,sans-serif}
+  body{background:var(--bg);padding:2rem;display:flex;justify-content:center}
+  main{width:100%;max-width:1000px}
+  h1{font-size:1.9rem;margin-bottom:.8rem;color:#111}
+  #controls{display:flex;align-items:center;margin-bottom:1rem;gap:.75rem}
+  button{
+    background:var(--accent);color:#fff;border:none;border-radius:8px;
+    padding:.6rem 1.2rem;font-size:1rem;cursor:pointer;transition:.2s;
+  }
+  button:disabled{opacity:.55;cursor:progress}
+  button:hover:not(:disabled){filter:brightness(1.08)}
+  #status{font-size:.95rem;color:#444}
+  table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:12px;
+        box-shadow:0 2px 6px rgba(0,0,0,.06);background:var(--card)}
+  thead{background:var(--accent-light)}
+  th,td{padding:.75rem .9rem;text-align:left;border-bottom:1px solid var(--border)}
+  th{font-weight:600;cursor:pointer;user-select:none}
+  tr:hover td{background:#fafcff}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  @media(max-width:600px){
+    th:nth-child(3),td:nth-child(3){display:block;padding-top:.4rem}
+    th:nth-child(1),td:nth-child(1){width:95px}
+  }
+</style>
 </head>
 <body>
-  <header>
-    <h1 style="color:black;">Scraped Broadband / Tech Headlines</h1>
-    <p>Click to fetch the latest articles (all 13 sources, past&nbsp;90 days).</p>
-    <button id="fetch-btn" class="contrast">Fetch Latest News</button>
-  </header>
+<main>
+  <h1>Broadband‑Related Headlines <small style="font-size:1rem;color:#666">(last 90 days)</small></h1>
 
-  <main>
-    <section id="output-table"></section>
-  </main>
+  <div id="controls">
+    <button id="fetchBtn">Fetch latest news</button>
+    <span id="status"></span>
+  </div>
 
-  <!-- jQuery -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <!-- DataTables JS (jQuery version) -->
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <table id="news" hidden>
+    <thead><tr>
+      <th data-key="article_date">Date ▼</th>
+      <th data-key="source">Source</th>
+      <th data-key="article_title">Title</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</main>
 
-  <script>
-    async function fetchNews() {
-      $('#fetch-btn').prop('disabled', true).text('Loading…');
+<script>
+/* ───────── CONFIG ───────── */
+const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+const N_ARTICLES = 10;
+const CUTOFF = dayjs().subtract(90,"day").toDate();
 
-      try {
-        // <-- NEW: grab pre‑scraped JSON from the Flask backend
-        const res = await fetch('http://localhost:8000/api/news');
-        if (!res.ok) throw new Error('API error ' + res.status);
-        const rows = await res.json();   // [{source, article_title, …}, …]
+/* ───────── HELPERS ───────── */
+const $ = (sel, root=document) => root.querySelector(sel);
+const $all = (sel, root=document) => [...root.querySelectorAll(sel)];
+function parseHTML(html){return new DOMParser().parseFromString(html,"text/html");}
+async function fetchDoc(url){
+  const r = await fetch(CORS_PROXY+encodeURIComponent(url));
+  return parseHTML(await r.text());
+}
+function keepDate(d){return d && d >= CUTOFF;}
+function tryParse(raw,...fmts){
+  raw=(raw||"").trim();
+  for(const f of fmts){
+    const d=dayjs(raw,f,true);
+    if(d.isValid())return d.toDate();
+  }
+  return null;
+}
 
-        // Build DataTable
-        const tableHtml = `
-          <table id="news-table" class="display stripe">
-            <thead>
-              <tr>
-                <th>Source</th><th>Title</th><th>Date</th><th>Link</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.map(r => `
-                <tr>
-                  <td>${r.source}</td>
-                  <td>${r.article_title}</td>
-                  <td>${r.article_date}</td>
-                  <td><a href="${r.article_url}" target="_blank">🔗</a></td>
-                </tr>`).join('')}
-            </tbody>
-          </table>`;
-        $('#output-table').html(tableHtml);
-        $('#news-table').DataTable({ order:[[2,'desc']] });
+/* ───────── 12 SCRAPERS ───────── */
+async function scrape_ntia(){
+  const doc=await fetchDoc("https://broadbandusa.ntia.gov/news/latest-news");
+  return $all("div.views-row",doc).slice(0,N_ARTICLES).map(row=>{
+    const t=$("span.field-content a",row);
+    const d=tryParse($("div.views-field-created span.field-content",row)?.textContent,"MMMM D, YYYY");
+    if(!t||!keepDate(d))return null;
+    return{source:"NTIA",article_title:t.textContent.trim(),
+      article_url:"https://broadbandusa.ntia.gov"+t.href,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_theverge(){
+  const doc=await fetchDoc("https://www.theverge.com/");
+  return $all("article",doc).slice(0,N_ARTICLES).map(c=>{
+    const a=$("a[data-analytics-link]",c);
+    const d=tryParse($("time",c)?.dateTime,"YYYY-MM-DD");
+    if(!a||!keepDate(d))return null;
+    let link=a.href; if(!/^https?:/.test(link))link="https://www.theverge.com"+link;
+    return{source:"The Verge",article_title:a.textContent.trim(),article_url:link,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_telecompetitor(){
+  const doc=await fetchDoc("https://www.telecompetitor.com/articles/");
+  return $all("article",doc).slice(0,N_ARTICLES).map(b=>{
+    const a=$("h2.wp-block-post-title a",b);
+    const d=tryParse($("time",b)?.textContent,"MMMM D, YYYY");
+    if(!a||!keepDate(d))return null;
+    return{source:"Telecompetitor",article_title:a.textContent.trim(),article_url:a.href,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_networkworld(){
+  const doc=await fetchDoc("https://www.networkworld.com/news/");
+  return $all("div.card",doc).slice(0,N_ARTICLES).map(c=>{
+    const h3=$("h3.card__title",c), a=$("a",c);
+    const d=tryParse($("time",c)?.dateTime,"YYYY-MM-DD");
+    if(!h3||!a||!keepDate(d))return null;
+    let link=a.href; if(!/^https?:/.test(link))link="https://www.networkworld.com"+link;
+    return{source:"Network World",article_title:h3.textContent.trim(),article_url:link,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_lightreading(){
+  const doc=await fetchDoc("https://www.lightreading.com");
+  return $all("div.ArticlePreview",doc).slice(0,N_ARTICLES).map(dv=>{
+    const title=$("div.ArticlePreview__Title",dv);
+    const d=tryParse($("span.ArticlePreview__Date",dv)?.textContent,"MMM D, YYYY");
+    let link=$("a",dv)?.href||""; if(link.startsWith("/"))link="https://www.lightreading.com"+link;
+    if(!title||!keepDate(d))return null;
+    return{source:"Light Reading",article_title:title.textContent.trim(),article_url:link,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_broadbandnow(){
+  const doc=await fetchDoc("https://broadbandnow.com/research");
+  return $all("div.card.research",doc).slice(0,N_ARTICLES).map(c=>{
+    const a=$("h2.card-title",c), link=$("a.thumbnail",c);
+    const d=tryParse($("p.card-updated-date",c)?.textContent,"MMMM D, YYYY");
+    if(!a||!link||!keepDate(d))return null;
+    return{source:"BroadbandNow",article_title:a.textContent.trim(),article_url:link.href,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_rcrwireless(){
+  const doc=await fetchDoc("https://www.rcrwireless.com/");
+  return $all("div.td-module-thumb",doc).slice(0,N_ARTICLES).map(b=>{
+    const par=b.parentElement;
+    const title=$("h3.entry-title a",par);
+    const d=tryParse($("time.entry-date",par)?.dateTime,"YYYY-MM-DD");
+    const author=$("span.td-post-author-name",par);
+    const excerpt=$("div.td-excerpt",par);
+    if(!title||!keepDate(d))return null;
+    return{source:"RCR Wireless",article_title:title.textContent.trim(),article_url:title.href,
+      article_date:d,author:author?.textContent.trim()||null,excerpt:excerpt?.textContent.trim()||null};
+  }).filter(Boolean);
+}
+async function scrape_lightwave(){
+  const doc=await fetchDoc("https://www.lightwaveonline.com/broadband");
+  return $all("a.title-wrapper",doc).slice(0,N_ARTICLES).map(a=>{
+    const d=tryParse(a.closest("div")?.querySelector("div.date")?.textContent,"MMM D, YYYY");
+    let link=a.href; if(link.startsWith("/"))link="https://www.lightwaveonline.com"+link;
+    if(!keepDate(d))return null;
+    return{source:"Lightwave Online",article_title:a.textContent.trim(),article_url:link,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_advanced_tv(){
+  const doc=await fetchDoc("https://www.advanced-television.com/?s=broadband");
+  return $all("article.text-secondary",doc).slice(0,N_ARTICLES).map(art=>{
+    const a=$("a.text-dark",art);
+    const d=tryParse($("div.border span",art)?.textContent,"MMMM D, YYYY");
+    let link=a?.href||""; if(link.startsWith("/"))link="https://www.advanced-television.com"+link;
+    if(!a||!keepDate(d))return null;
+    return{source:"Advanced TV",article_title:a.textContent.trim(),article_url:link,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_cnet(){
+  const doc=await fetchDoc("https://www.cnet.com/search/?searchQuery=broadband");
+  return $all("article.c-pageSearch_searchResult",doc).slice(0,N_ARTICLES).map(art=>{
+    const a=$("a.c-pageSearch_searchResultUrlContainer",art);
+    const d=tryParse($("time",art)?.dateTime,"YYYY-MM-DD");
+    let link=a?.href||""; if(link.startsWith("/"))link="https://www.cnet.com"+link;
+    if(!a||!keepDate(d))return null;
+    return{source:"CNET",article_title:a.textContent.trim(),article_url:link,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_fiberoptics(){
+  const doc=await fetchDoc("https://www.fiberopticsonline.com/hub/bucket/homelatestheadlines");
+  return $all("li.mb-2.vm-summary-link",doc).slice(0,N_ARTICLES).map(li=>{
+    const a=li.querySelector("a");
+    const d=tryParse(li.querySelector("em.vm-hub-date")?.textContent,"MMM D, YYYY");
+    let link=a?.href||""; if(link.startsWith("/"))link="https://www.fiberopticsonline.com"+link;
+    if(!a||!keepDate(d))return null;
+    return{source:"Fiber Optics Online",article_title:a.textContent.trim(),article_url:link,article_date:d};
+  }).filter(Boolean);
+}
+async function scrape_techradar(){
+  const doc=await fetchDoc("https://www.techradar.com/search?searchTerm=broadband");
+  return $all("article.search-result",doc).slice(0,N_ARTICLES).map(art=>{
+    const h3=$("h3.article-name",art), a=$("a.article-link",art);
+    const d=tryParse($("time.no-wrap.relative-date.date-with-prefix",art)?.dateTime,"YYYY-MM-DD");
+    let link=a?.href||""; if(link.startsWith("/"))link="https://www.techradar.com"+link;
+    if(!h3||!keepDate(d))return null;
+    return{source:"TechRadar",article_title:h3.textContent.trim(),article_url:link,article_date:d};
+  }).filter(Boolean);
+}
 
-      } catch (err) {
-        $('#output-table').html(`<pre style="color:crimson">${err}</pre>`);
-      } finally {
-        $('#fetch-btn').prop('disabled', false).text('Fetch Latest News');
-      }
-    }
+const SCRAPERS=[
+  scrape_ntia,scrape_theverge,scrape_telecompetitor,scrape_networkworld,
+  scrape_lightreading,scrape_broadbandnow,scrape_rcrwireless,scrape_lightwave,
+  scrape_advanced_tv,scrape_cnet,scrape_fiberoptics,scrape_techradar
+];
 
-    $('#fetch-btn').on('click', fetchNews);
-  </script>
-</body>
-</html>
-    $('#fetch-btn').on('click', fetchNews);
-  </script>
+/* ───────── UI HANDLERS ───────── */
+$("#fetchBtn").addEventListener("click",fetchNews);
+window.addEventListener("load",fetchNews);
+async function fetchNews(){
+  const btn=$("#fetchBtn"),status=$("#status"),table=$("#news"),tbody=$("#news tbody");
+  btn.disabled=true; status.textContent="Fetching…";
+  try{
+    const records=(await Promise.all(SCRAPERS.map(fn=>fn()))).flat()
+                    .sort((a,b)=>b.article_date-a.article_date);
+    tbody.innerHTML="";
+    records.forEach(r=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML=`
+        <td>${dayjs(r.article_date).format("YYYY‑MM‑DD")}</td>
+        <td>${r.source}</td>
+        <td><a href="${r.article_url}" target="_blank" rel="noopener">${r.article_title}</a></td>`;
+      tbody.appendChild(tr);
+    });
+    table.hidden=false;
+    status.textContent=`Showing ${records.length} articles (updated ${dayjs().format("HH:mm")})`;
+  }catch(err){
+    console.error(err);
+    status.textContent="Error fetching data.";
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+/* ───────── TABLE SORTING ───────── */
+$all("th").forEach(th=>th.onclick=()=>{
+  const idx=[...th.parentNode.children].indexOf(th),
+        asc=th.textContent.includes("▲");
+  const rows=[...$("#news tbody").rows];
+  rows.sort((a,b)=>{
+    const va=a.cells[idx].innerText, vb=b.cells[idx].innerText;
+    return idx===0 ? (asc? va.localeCompare(vb): vb.localeCompare(va))
+                   : (asc? va.localeCompare(vb): vb.localeCompare(va));
+  }).forEach(r=>$("#news tbody").appendChild(r));
+  $all("th").forEach(x=>x.textContent=x.textContent.replace(/[▲▼]/,""));
+  th.textContent=th.textContent.replace(/[▲▼]?$/,asc?" ▼":" ▲");
+});
+</script>
 </body>
 </html>
