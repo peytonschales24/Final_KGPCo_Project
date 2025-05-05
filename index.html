@@ -6,6 +6,9 @@
 
 <!-- date helper -->
 <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
+<script>dayjs.extend(window.dayjs_plugin_relativeTime)</script>
+
 
 <style>
   :root{
@@ -14,20 +17,27 @@
     --accent:#0057b7;
     --accent-light:#e9f1ff;
     --border:#d7e0ea;
+    --text-light: #666;
+    --text-dark: #111;
+    --warn: #f9a825;
+    --error: #d32f2f;
   }
   *{box-sizing:border-box;margin:0;padding:0;font:400 16px/1.4 system-ui,sans-serif}
   body{background:var(--bg);padding:2rem;display:flex;justify-content:center}
   main{width:100%;max-width:1000px}
-  h1{font-size:1.9rem;margin-bottom:.8rem;color:#111}
+  h1{font-size:1.9rem;margin-bottom:.8rem;color:var(--text-dark)}
+  h1 small {font-size:1rem; color:var(--text-light)}
+
   #controls{display:flex;align-items:center;margin-bottom:1rem;gap:.75rem;flex-wrap:wrap}
   button{
     background:var(--accent);color:#fff;border:none;border-radius:8px;
     padding:.6rem 1.2rem;font-size:1rem;cursor:pointer;transition:.2s;
+    line-height: 1.2; /* Added for consistency */
   }
   button:disabled{opacity:.55;cursor:progress}
   button:hover:not(:disabled){filter:brightness(1.08)}
   #status{font-size:.95rem;color:#444;margin-left:auto}
-  
+
   /* Search bar styling */
   #searchWrapper {
     position: relative;
@@ -63,7 +73,40 @@
   #clearSearch:hover {
     color: #333;
   }
-  
+
+  /* API Key Settings */
+  #apiKeySettings {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--accent-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  #apiKeySettings label { font-weight: 500; }
+  #apiKeyInput {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    flex-grow: 1;
+    min-width: 200px;
+  }
+  #apiKeyInput:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  #apiKeySettings button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    background-color: #4CAF50; /* Green for save */
+  }
+  #apiKeyStatus { color: var(--text-light); font-style: italic; }
+
   table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:12px;
         box-shadow:0 2px 6px rgba(0,0,0,.06);background:var(--card)}
   thead{background:var(--accent-light)}
@@ -73,40 +116,87 @@
   tr.hidden{display:none}
   a{color:var(--accent);text-decoration:none}
   a:hover{text-decoration:underline}
+
+  /* Overview button and summary styling */
+  .overview-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
+    background-color: #555;
+    white-space: nowrap;
+  }
+  .overview-btn:disabled { background-color: #999; filter: none; }
+  .summary-output {
+    display: block; /* Changed from inline-block */
+    margin-top: 0.5rem; /* Added margin */
+    font-size: 0.85rem;
+    color: var(--text-light);
+    max-height: 100px; /* Limit initial height */
+    overflow-y: auto; /* Allow scrolling for long summaries */
+    background-color: #f0f0f0;
+    padding: 0.4rem;
+    border-radius: 4px;
+    line-height: 1.3;
+    border: 1px solid var(--border);
+  }
+  .summary-output.error { color: var(--error); }
+  .summary-output.loading { font-style: italic; }
+
   #noResults {
     text-align: center;
     padding: 2rem;
-    color: #666;
+    color: var(--text-light);
     background: var(--card);
     border-radius: 12px;
     display: none;
   }
+  @media(max-width:768px){ /* Adjusted breakpoint */
+     th:nth-child(3),td:nth-child(3){ /* Title */
+         /* Keep title full width */
+     }
+     th:nth-child(4),td:nth-child(4){ /* Overview */
+         /* Adjust overview layout */
+     }
+     th:nth-child(1),td:nth-child(1){width:90px} /* Date */
+     th:nth-child(2),td:nth-child(2){width:110px} /* Source */
+
+     .overview-btn { margin-bottom: 0.3rem; }
+     .summary-output { max-width: 100%; } /* Ensure it doesn't overflow */
+  }
   @media(max-width:600px){
-    th:nth-child(3),td:nth-child(3){display:block;padding-top:.4rem}
-    th:nth-child(1),td:nth-child(1){width:95px}
-    #searchWrapper {
-      max-width: 100%;
-      margin-bottom: .5rem;
-    }
-    #status {
-      margin-left: 0;
-    }
+    #controls { flex-direction: column; align-items: stretch; }
+    #searchWrapper { max-width: 100%; margin-bottom: .5rem; }
+    #status { margin-left: 0; text-align: center; margin-top: 0.5rem; }
+    #apiKeySettings { flex-direction: column; align-items: stretch; }
+    #apiKeyInput { min-width: unset; }
+    /* Mobile table adjustments might be needed depending on content */
+    th, td { padding: 0.5rem; font-size: 0.9rem;}
+    th:nth-child(3), td:nth-child(3) { /* Title - less padding */ padding-right: 0.5rem;}
+    th:nth-child(4), td:nth-child(4) { /* Overview */ padding-left: 0.5rem;}
+    .summary-output { font-size: 0.8rem; max-height: 80px; }
   }
 </style>
 </head>
 <body>
 <main>
-  <h1>Broadband‑Related Headlines <small style="font-size:1rem;color:#666">(last 90 days)</small></h1>
+  <h1>Broadband‑Related Headlines <small> (last 90 days)</small></h1>
 
   <div id="controls">
     <button id="fetchBtn">Fetch latest news</button>
-    
+
     <div id="searchWrapper">
       <input type="text" id="searchInput" placeholder="Search articles..." aria-label="Search articles">
       <button id="clearSearch" aria-label="Clear search">×</button>
     </div>
-    
+
     <span id="status"></span>
+  </div>
+
+  <!-- API Key Section -->
+  <div id="apiKeySettings">
+      <label for="apiKeyInput">HF API Key:</label>
+      <input type="password" id="apiKeyInput" placeholder="Paste your Hugging Face API Key (stored locally)">
+      <button id="saveApiKeyBtn">Save Key</button>
+      <span id="apiKeyStatus"></span>
   </div>
 
   <div id="noResults">No matching articles found</div>
@@ -116,24 +206,42 @@
       <th data-key="article_date">Date ▼</th>
       <th data-key="source">Source</th>
       <th data-key="article_title">Title</th>
+      <th>Overview</th> <!-- New Column -->
     </tr></thead>
-    <tbody></tbody>
+    <tbody><!-- Content added by JS --></tbody>
   </table>
 </main>
 
 <script>
 /* ───────── CONFIG ───────── */
-const CORS_PROXY = "https://api.allorigins.win/raw?url=";
-const N_ARTICLES = 10;
+const CORS_PROXY = "https://api.allorigins.win/raw?url="; // NOTE: This free proxy has limitations
+const N_ARTICLES = 10; // Per source
 const CUTOFF = dayjs().subtract(90,"day").toDate();
+const HF_API_KEY_STORAGE = "hfApiKey";
+const HF_SUMMARIZATION_MODEL = "facebook/bart-large-cnn"; // You can change this model if needed
+const HF_API_URL = `https://api-inference.huggingface.co/models/${HF_SUMMARIZATION_MODEL}`;
 
 /* ───────── HELPERS ───────── */
 const $ = (sel, root=document) => root.querySelector(sel);
 const $all = (sel, root=document) => [...root.querySelectorAll(sel)];
 function parseHTML(html){return new DOMParser().parseFromString(html,"text/html");}
-async function fetchDoc(url){
-  const r = await fetch(CORS_PROXY+encodeURIComponent(url));
-  return parseHTML(await r.text());
+async function fetchDoc(url, options = {}){ // Added options for potential future use
+  try {
+    const response = await fetch(CORS_PROXY+encodeURIComponent(url), options);
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const text = await response.text();
+    // Handle potential allorigins error messages embedded in the response
+    if (text.includes("allorigins error") || text.includes("target server error")) {
+        console.warn(`CORS Proxy error for ${url}: ${text.substring(0, 100)}...`);
+        throw new Error("CORS Proxy error fetching content.");
+    }
+    return parseHTML(text);
+  } catch (error) {
+      console.error(`Error fetching document ${url}:`, error);
+      throw error; // Re-throw to be caught by caller
+  }
 }
 function keepDate(d){return d && d >= CUTOFF;}
 function tryParse(raw,...fmts){
@@ -145,7 +253,45 @@ function tryParse(raw,...fmts){
   return null;
 }
 
-/* ───────── 12 SCRAPERS ───────── */
+/* ───────── API Key Management ───────── */
+function getApiKey() {
+    let key = localStorage.getItem(HF_API_KEY_STORAGE);
+    if (!key) {
+        key = prompt("Please enter your Hugging Face API Key for summarization.\nIt will be stored locally in your browser.");
+        if (key) {
+            saveApiKey(key);
+        } else {
+            return null; // User cancelled
+        }
+    }
+    return key;
+}
+
+function saveApiKey(key) {
+    if (key && typeof key === 'string' && key.trim()) {
+        localStorage.setItem(HF_API_KEY_STORAGE, key.trim());
+        updateApiKeyStatus(true); // Indicate saved
+        $("#apiKeyInput").value = key.trim(); // Update input field as well
+        return true;
+    }
+    updateApiKeyStatus(false); // Indicate not saved/invalid
+    return false;
+}
+
+function updateApiKeyStatus(isSet) {
+    const statusEl = $("#apiKeyStatus");
+    if (isSet) {
+        statusEl.textContent = "Key saved locally.";
+        statusEl.style.color = "green";
+    } else {
+        const currentKey = localStorage.getItem(HF_API_KEY_STORAGE);
+        statusEl.textContent = currentKey ? "Key saved locally." : "Key not set.";
+         statusEl.style.color = currentKey ? "green" : "var(--text-light)";
+    }
+}
+
+
+/* ───────── 12 SCRAPERS (Unchanged - Preserving Original Logic) ───────── */
 async function scrape_ntia(){
   const doc=await fetchDoc("https://broadbandusa.ntia.gov/news/latest-news");
   return $all("div.views-row",doc).slice(0,N_ARTICLES).map(row=>{
@@ -273,9 +419,193 @@ const SCRAPERS=[
   scrape_advanced_tv,scrape_cnet,scrape_fiberoptics,scrape_techradar
 ];
 
+
+/* ───────── AI Summarization ───────── */
+
+// Basic content extraction - VERY LIKELY TO NEED ADJUSTMENT PER SITE
+function extractMainContent(doc) {
+    const selectors = [
+        'article',
+        'main',
+        '.main-content',
+        '.post-content',
+        '.entry-content',
+        '.article-body',
+        '.story-content',
+        'div[role="main"]'
+    ];
+    let mainEl = null;
+    for (const selector of selectors) {
+        mainEl = doc.querySelector(selector);
+        if (mainEl) break;
+    }
+    if (!mainEl) mainEl = doc.body; // Fallback to body
+
+    // Get all paragraphs within the main element
+    const paragraphs = $all('p', mainEl);
+    let text = paragraphs.map(p => p.textContent.trim()).join('\n');
+
+    // Basic cleanup
+    text = text.replace(/\s{2,}/g, ' '); // Replace multiple spaces/newlines with single space
+    text = text.trim();
+
+    // Limit length to avoid overly long inputs for the API (e.g., ~10k chars)
+    const MAX_LENGTH = 10000;
+    if (text.length > MAX_LENGTH) {
+        console.warn("Extracted text truncated for API call.");
+        text = text.substring(0, MAX_LENGTH) + "...";
+    }
+
+    if (text.length < 100) { // Arbitrary minimum length
+        console.warn("Extracted text seems very short, might be inaccurate.");
+    }
+
+    return text;
+}
+
+async function fetchArticleText(url) {
+    console.log(`Fetching article content for: ${url}`);
+    const doc = await fetchDoc(url); // Uses the existing helper with CORS proxy
+    return extractMainContent(doc);
+}
+
+async function getHuggingFaceSummary(text, apiKey) {
+    if (!text) {
+        throw new Error("No text content provided for summarization.");
+    }
+    console.log(`Requesting summary from HF for ${text.length} chars...`);
+
+    try {
+        const response = await fetch(HF_API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                inputs: text,
+                parameters: { // Optional: Adjust summary length
+                    min_length: 30,
+                    max_length: 150
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown API error' }));
+             let errorMessage = `HF API Error: ${response.status}`;
+             if (errorData.error) {
+                 errorMessage += ` - ${errorData.error}`;
+             }
+             // Specific check for model loading
+             if (errorData.error && errorData.error.includes("currently loading")) {
+                 errorMessage = "Model is loading, try again shortly.";
+             }
+             console.error("HF API Error Response:", errorData);
+             throw new Error(errorMessage);
+        }
+
+        const result = await response.json();
+        console.log("HF API Success:", result);
+
+        // The result format might be [{ summary_text: "..." }]
+        if (Array.isArray(result) && result.length > 0 && result[0].summary_text) {
+            return result[0].summary_text;
+        } else if (result.summary_text) { // Or just { summary_text: "..." }
+             return result.summary_text;
+        } else {
+            console.error("Unexpected HF API response format:", result);
+            throw new Error("Could not parse summary from API response.");
+        }
+    } catch (error) {
+        console.error('Error fetching summary from Hugging Face:', error);
+        throw error; // Re-throw to be handled by the click handler
+    }
+}
+
+async function handleOverviewClick(event) {
+    const button = event.target;
+    const outputSpan = button.nextElementSibling; // Assumes span is immediately after
+    const url = button.dataset.url;
+
+    if (!url || !outputSpan) {
+        console.error("Missing URL or output span for overview button.");
+        return;
+    }
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        outputSpan.textContent = "API Key needed.";
+        outputSpan.className = 'summary-output error';
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Loading...";
+    outputSpan.textContent = "Fetching article content...";
+    outputSpan.className = 'summary-output loading';
+    outputSpan.style.display = 'block'; // Ensure it's visible
+
+    try {
+        const articleText = await fetchArticleText(url);
+        if (!articleText || articleText.length < 50) { // Check for minimal content
+             throw new Error("Could not extract sufficient article text.");
+        }
+
+        outputSpan.textContent = "Generating summary...";
+        const summary = await getHuggingFaceSummary(articleText, apiKey);
+
+        outputSpan.textContent = summary;
+        outputSpan.className = 'summary-output';
+        button.textContent = "Overview"; // Reset button text
+
+    } catch (error) {
+        console.error(`Failed to get overview for ${url}:`, error);
+        outputSpan.textContent = `Error: ${error.message}`;
+        outputSpan.className = 'summary-output error';
+        button.textContent = "Retry"; // Allow retry
+    } finally {
+        button.disabled = false;
+    }
+}
+
+
 /* ───────── UI HANDLERS ───────── */
-$("#fetchBtn").addEventListener("click",fetchNews);
-window.addEventListener("load",fetchNews);
+$("#fetchBtn").addEventListener("click", fetchNews);
+window.addEventListener("load", () => {
+    // Set initial API Key status message and load news
+    updateApiKeyStatus(!!localStorage.getItem(HF_API_KEY_STORAGE));
+    fetchNews();
+});
+
+// API Key Save Button
+$("#saveApiKeyBtn").addEventListener("click", () => {
+    const keyInput = $("#apiKeyInput");
+    if (saveApiKey(keyInput.value)) {
+        // Optionally clear the input after save, or keep it visible
+        // keyInput.value = '';
+    } else if (!keyInput.value.trim()) {
+         $("#apiKeyStatus").textContent = "Please enter a key.";
+         $("#apiKeyStatus").style.color = "var(--error)";
+    } else {
+        $("#apiKeyStatus").textContent = "Failed to save key (invalid?).";
+        $("#apiKeyStatus").style.color = "var(--error)";
+    }
+});
+// Update status if user manually clears input
+$("#apiKeyInput").addEventListener("input", () => {
+    if (!$("#apiKeyInput").value.trim()) {
+        updateApiKeyStatus(!!localStorage.getItem(HF_API_KEY_STORAGE)); // Reset to saved status or 'not set'
+    }
+});
+
+// Event delegation for overview buttons
+$("#news tbody").addEventListener("click", (event) => {
+    if (event.target.classList.contains("overview-btn")) {
+        handleOverviewClick(event);
+    }
+});
+
 
 /* ───────── SEARCH FUNCTIONALITY ───────── */
 const searchInput = $("#searchInput");
@@ -295,83 +625,161 @@ function filterArticles() {
   const searchTerm = searchInput.value.toLowerCase().trim();
   const rows = $all("#news tbody tr");
   let matchCount = 0;
-  
+
   // Show/hide clear button
   clearSearchBtn.style.display = searchTerm ? "block" : "none";
-  
+
   rows.forEach(row => {
     const title = row.cells[2].textContent.toLowerCase();
     const source = row.cells[1].textContent.toLowerCase();
     const date = row.cells[0].textContent.toLowerCase();
-    
+
     // Match title, source, or date
-    const isMatch = title.includes(searchTerm) || 
-                   source.includes(searchTerm) || 
+    const isMatch = title.includes(searchTerm) ||
+                   source.includes(searchTerm) ||
                    date.includes(searchTerm);
-    
+
     row.classList.toggle("hidden", !isMatch);
     if (isMatch) matchCount++;
   });
-  
+
   // Show/hide no results message
-  noResultsDiv.style.display = matchCount === 0 && searchTerm ? "block" : "none";
-  
-  // Show/hide table based on search results
-  $("#news").style.display = (rows.length > 0 && (matchCount > 0 || !searchTerm)) ? "table" : "none";
-  
+  noResultsDiv.style.display = matchCount === 0 && rows.length > 0 && searchTerm ? "block" : "none"; // Only show if rows exist but none match search
+
+  // Show/hide table based on search results and total rows
+  const tableShouldBeVisible = rows.length > 0 && (matchCount > 0 || !searchTerm);
+  $("#news").style.display = tableShouldBeVisible ? "table" : "none";
+  if (!tableShouldBeVisible && !(matchCount === 0 && rows.length > 0 && searchTerm)) { // Hide noResults if table itself is hidden for other reasons
+      noResultsDiv.style.display = "none";
+  }
+
+
   // Update status message
   const status = $("#status");
+  const totalRows = $all("#news tbody tr:not(.hidden)").length; // Count only visible rows after filtering
+  const absoluteTotal = $all("#news tbody tr").length; // Get total fetched before filtering
   if (searchTerm) {
-    status.textContent = `Found ${matchCount} matching articles (${rows.length} total)`;
+    status.textContent = `Found ${matchCount} matching articles (${absoluteTotal} total)`;
   } else {
-    status.textContent = `Showing ${rows.length} articles (updated ${dayjs().format("HH:mm")})`;
+      status.textContent = `Showing ${absoluteTotal} articles (updated ${dayjs().format("HH:mm")})`;
   }
 }
 
 async function fetchNews(){
   const btn=$("#fetchBtn"),status=$("#status"),table=$("#news"),tbody=$("#news tbody");
   btn.disabled=true; status.textContent="Fetching…";
+  tbody.innerHTML = ""; // Clear previous results
+  table.hidden = true; // Hide table while fetching
+  noResultsDiv.style.display = "none"; // Hide no results message
+
   try{
-    const records=(await Promise.all(SCRAPERS.map(fn=>fn()))).flat()
-                    .sort((a,b)=>b.article_date-a.article_date);
-    tbody.innerHTML="";
+    // Wrap scraper calls in error handling
+    const results = await Promise.allSettled(SCRAPERS.map(fn => fn().catch(err => {
+        // Catch errors within individual scrapers
+        console.error(`Error in scraper ${fn.name}:`, err);
+        return []; // Return empty array on error for this source
+    })));
+
+    const records = results
+        .filter(result => result.status === 'fulfilled') // Keep only successful scrapes
+        .map(result => result.value) // Get the array of articles
+        .flat() // Flatten the array of arrays
+        .filter(Boolean) // Ensure no null/undefined items remain
+        .sort((a,b)=>b.article_date-a.article_date); // Sort by date descending
+
+    tbody.innerHTML=""; // Clear again just in case
+    if (records.length === 0) {
+        status.textContent = "No articles found or all scrapers failed.";
+        noResultsDiv.textContent = "Could not fetch any articles. Check console for errors.";
+        noResultsDiv.style.display = "block";
+        table.hidden = true;
+        return; // Stop if no records
+    }
+
     records.forEach(r=>{
       const tr=document.createElement("tr");
+      // Added data-url to the button and a span for output
       tr.innerHTML=`
         <td>${dayjs(r.article_date).format("YYYY‑MM‑DD")}</td>
         <td>${r.source}</td>
-        <td><a href="${r.article_url}" target="_blank" rel="noopener">${r.article_title}</a></td>`;
+        <td><a href="${r.article_url}" target="_blank" rel="noopener">${r.article_title}</a></td>
+        <td>
+            <button class="overview-btn" data-url="${r.article_url}">Overview</button>
+            <span class="summary-output" style="display: none;"></span>
+        </td>`;
       tbody.appendChild(tr);
     });
+
     table.hidden=false;
     status.textContent=`Showing ${records.length} articles (updated ${dayjs().format("HH:mm")})`;
-    
+
     // Clear search field and reset filtering
     clearSearch();
-  }catch(err){
-    console.error(err);
-    status.textContent="Error fetching data.";
+  }catch(err){ // Catch errors from Promise.allSettled or sorting/rendering
+    console.error("Error during fetchNews execution:", err);
+    status.textContent="Error fetching data. Check console.";
+    noResultsDiv.textContent = "An error occurred while fetching news.";
+    noResultsDiv.style.display = "block";
+    table.hidden = true;
   }finally{
     btn.disabled=false;
+    // Ensure filter state is correct even after errors
+    filterArticles();
   }
 }
 
 /* ───────── TABLE SORTING ───────── */
-$all("th").forEach(th=>th.onclick=()=>{
-  const idx=[...th.parentNode.children].indexOf(th),
-        asc=th.textContent.includes("▲");
-  const rows=[...$("#news tbody").rows];
-  rows.sort((a,b)=>{
-    const va=a.cells[idx].innerText, vb=b.cells[idx].innerText;
-    return idx===0 ? (asc? va.localeCompare(vb): vb.localeCompare(va))
-                   : (asc? va.localeCompare(vb): vb.localeCompare(va));
-  }).forEach(r=>$("#news tbody").appendChild(r));
-  $all("th").forEach(x=>x.textContent=x.textContent.replace(/[▲▼]/,""));
-  th.textContent=th.textContent.replace(/[▲▼]?$/,asc?" ▼":" ▲");
-  
-  // Re-apply search filter after sorting
-  filterArticles();
+$all("th").forEach((th, headerIndex) => {
+    // Disable sorting for the new 'Overview' column
+    if (headerIndex === 3) { // 0: Date, 1: Source, 2: Title, 3: Overview
+        th.style.cursor = 'default';
+        return;
+    }
+
+    th.onclick = () => {
+        const tableBody = $("#news tbody");
+        if (!tableBody) return; // Ensure tbody exists
+
+        const currentRows = Array.from(tableBody.rows);
+        const isAscending = th.textContent.includes("▲");
+        const sortDirection = isAscending ? -1 : 1; // Toggle direction
+
+        currentRows.sort((rowA, rowB) => {
+            const cellA = rowA.cells[headerIndex]?.innerText || '';
+            const cellB = rowB.cells[headerIndex]?.innerText || '';
+
+            // Date sort (index 0)
+            if (headerIndex === 0) {
+                // Use Date objects for reliable comparison
+                const dateA = dayjs(cellA, "YYYY-MM-DD").toDate();
+                const dateB = dayjs(cellB, "YYYY-MM-DD").toDate();
+                if (dateA < dateB) return -1 * sortDirection;
+                if (dateA > dateB) return 1 * sortDirection;
+                return 0;
+            } else {
+                // Default string sort for Source (1) and Title (2)
+                return cellA.localeCompare(cellB) * sortDirection;
+            }
+        });
+
+        // Re-append sorted rows
+        currentRows.forEach(row => tableBody.appendChild(row));
+
+        // Update header arrows
+        $all("th").forEach((header, idx) => {
+            // Skip the Overview header
+             if (idx !== 3) {
+                 header.textContent = header.textContent.replace(/[▲▼]/, "").trim();
+             }
+        });
+         th.textContent += (sortDirection === 1 ? " ▲" : " ▼");
+
+
+        // Re-apply search filter after sorting (important!)
+        filterArticles();
+    };
 });
+
 </script>
 </body>
 </html>
