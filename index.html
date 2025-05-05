@@ -149,12 +149,19 @@
     border-radius: 12px;
     display: none;
   }
+  
+  /* Adjust column widths in the table */
+  th:nth-child(1), td:nth-child(1) { width: 100px; } /* Date */
+  th:nth-child(2), td:nth-child(2) { width: 110px; } /* Source */
+  th:nth-child(3), td:nth-child(3) { } /* Title - flexible width */
+  th:nth-child(4), td:nth-child(4) { width: 150px; } /* AI Overview - fixed width */
+  
   @media(max-width:768px){ /* Adjusted breakpoint */
      th:nth-child(3),td:nth-child(3){ /* Title */
          /* Keep title full width */
      }
-     th:nth-child(4),td:nth-child(4){ /* Overview */
-         /* Adjust overview layout */
+     th:nth-child(4),td:nth-child(4){ /* AI Overview */
+         width: 120px; /* Reduce width on smaller screens */
      }
      th:nth-child(1),td:nth-child(1){width:90px} /* Date */
      th:nth-child(2),td:nth-child(2){width:110px} /* Source */
@@ -171,7 +178,10 @@
     /* Mobile table adjustments might be needed depending on content */
     th, td { padding: 0.5rem; font-size: 0.9rem;}
     th:nth-child(3), td:nth-child(3) { /* Title - less padding */ padding-right: 0.5rem;}
-    th:nth-child(4), td:nth-child(4) { /* Overview */ padding-left: 0.5rem;}
+    th:nth-child(4), td:nth-child(4) { /* AI Overview */ 
+      padding-left: 0.5rem;
+      width: 100px; /* Further reduce width on mobile */
+    }
     .summary-output { font-size: 0.8rem; max-height: 80px; }
   }
 </style>
@@ -206,7 +216,7 @@
       <th data-key="article_date">Date ▼</th>
       <th data-key="source">Source</th>
       <th data-key="article_title">Title</th>
-      <th>Overview</th> <!-- New Column -->
+      <th>AI Overview</th> <!-- Changed from "Overview" to "AI Overview" -->
     </tr></thead>
     <tbody><!-- Content added by JS --></tbody>
   </table>
@@ -557,7 +567,7 @@ async function handleOverviewClick(event) {
 
         outputSpan.textContent = summary;
         outputSpan.className = 'summary-output';
-        button.textContent = "Overview"; // Reset button text
+        button.textContent = "AI Overview"; // Changed from "Overview" to "AI Overview"
 
     } catch (error) {
         console.error(`Failed to get overview for ${url}:`, error);
@@ -698,13 +708,13 @@ async function fetchNews(){
 
     records.forEach(r=>{
       const tr=document.createElement("tr");
-      // Added data-url to the button and a span for output
+      // Changed button text from "Overview" to "AI Overview"
       tr.innerHTML=`
         <td>${dayjs(r.article_date).format("YYYY‑MM‑DD")}</td>
         <td>${r.source}</td>
         <td><a href="${r.article_url}" target="_blank" rel="noopener">${r.article_title}</a></td>
         <td>
-            <button class="overview-btn" data-url="${r.article_url}">Overview</button>
+            <button class="overview-btn" data-url="${r.article_url}">AI Overview</button>
             <span class="summary-output" style="display: none;"></span>
         </td>`;
       tbody.appendChild(tr);
@@ -730,8 +740,8 @@ async function fetchNews(){
 
 /* ───────── TABLE SORTING ───────── */
 $all("th").forEach((th, headerIndex) => {
-    // Disable sorting for the new 'Overview' column
-    if (headerIndex === 3) { // 0: Date, 1: Source, 2: Title, 3: Overview
+    // Disable sorting for the new 'AI Overview' column
+    if (headerIndex === 3) { // 0: Date, 1: Source, 2: Title, 3: AI Overview
         th.style.cursor = 'default';
         return;
     }
@@ -767,7 +777,7 @@ $all("th").forEach((th, headerIndex) => {
 
         // Update header arrows
         $all("th").forEach((header, idx) => {
-            // Skip the Overview header
+            // Skip the AI Overview header
              if (idx !== 3) {
                  header.textContent = header.textContent.replace(/[▲▼]/, "").trim();
              }
