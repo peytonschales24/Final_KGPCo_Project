@@ -265,11 +265,12 @@
         flex-shrink: 0; /* Prevent title from shrinking */
       }
       #modalSummaryContent {
-        overflow-y: auto; /* Allow summary to scroll */
+        /* Existing, ensure it works with new parent */
+        overflow-y: auto;
         line-height: 1.6;
-        margin-top: 10px; /* Space between title and summary */
-        flex-grow: 1; /* Allow this area to take up available space */
-        min-height: 50px; /* Ensure some space even if empty initially */
+        /* margin-top: 0; Removed as panel provides structure */
+        flex-grow: 1;
+        min-height: 50px;
       }
       .modal-close-btn {
         color: #aaa;
@@ -295,6 +296,119 @@
       .error-summary {
         color: var(--error);
         font-weight: bold;
+      }
+
+      /* Modal Tab Styles */
+      #modalTabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 15px; /* Space between tabs and content */
+        flex-shrink: 0; /* Prevent tabs from shrinking */
+      }
+      .modal-tab-btn {
+        padding: 10px 15px;
+        cursor: pointer;
+        border: none;
+        background-color: transparent;
+        font-size: 1rem;
+        color: var(--text-light);
+        border-bottom: 3px solid transparent;
+        margin-bottom: -1px; /* Align with parent border */
+        transition: color 0.2s, border-color 0.2s;
+      }
+      .modal-tab-btn:hover {
+        color: var(--accent);
+      }
+      .modal-tab-btn.active {
+        color: var(--accent);
+        font-weight: 600;
+        border-bottom-color: var(--accent);
+      }
+
+      #modalTabContentPanels {
+        flex-grow: 1; /* Allow this to take up remaining space */
+        display: flex; /* Needed for child to also use flex-grow if desired */
+        flex-direction: column; /* Stack panels, only one visible */
+        overflow: hidden; /* Prevent content from overflowing panels themselves */
+        min-height: 100px; /* Ensure some minimum height */
+      }
+
+      .modal-tab-panel {
+        display: none; /* Hidden by default */
+        flex-grow: 1; /* Panel takes available space */
+        flex-direction: column; /* For internal layout, e.g. chat messages + input */
+        overflow: hidden; /* Manage overflow within the panel */
+      }
+      .modal-tab-panel.active {
+        display: flex; /* Show active panel and enable flex properties */
+      }
+
+      /* Chat Panel Styles */
+      #modalChatMessages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        margin-bottom: 10px;
+        background-color: #f9f9f9;
+        min-height: 100px; /* Ensure it has some height */
+      }
+      .chat-message {
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        line-height: 1.5;
+        max-width: 90%;
+      }
+      .chat-message.user {
+        background-color: var(--accent-light);
+        color: var(--text-dark);
+        margin-left: auto; /* Align to right */
+        text-align: right;
+      }
+      .chat-message.assistant {
+        background-color: #e9e9eb;
+        color: var(--text-dark);
+        margin-right: auto; /* Align to left */
+      }
+      .chat-message.error {
+        background-color: #ffebee;
+        color: var(--error);
+        font-style: italic;
+      }
+      .chat-message.loading-chat {
+        font-style: italic;
+        color: var(--text-light);
+        text-align: center;
+      }
+
+      #modalChatInputArea {
+        display: flex;
+        gap: 10px;
+        flex-shrink: 0; /* Prevent input area from shrinking */
+      }
+      #chatInput {
+        flex-grow: 1;
+        padding: 0.6rem 0.8rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 0.95rem;
+        resize: none; /* Prevent manual resize, rows attribute handles height */
+      }
+      #chatInput:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-light);
+      }
+      #sendChatBtn {
+        padding: 0.6rem 1rem;
+        font-size: 0.95rem;
+        /* Standard button styles already apply */
+      }
+      #modalChatError {
+        /* For errors specific to chat API calls */
+        margin-top: 5px;
       }
 
       @media (max-width: 768px) {
@@ -363,6 +477,17 @@
           margin-bottom: 0.75rem;
           padding-bottom: 0.5rem;
         }
+        .modal-tab-btn {
+          font-size: 0.9rem;
+          padding: 8px 10px;
+        }
+        #chatInput {
+          font-size: 0.9rem;
+        }
+        #sendChatBtn {
+          font-size: 0.9rem;
+          padding: 0.5rem 0.8rem;
+        }
       }
     </style>
   </head>
@@ -417,12 +542,50 @@
       <div class="modal-content">
         <span class="modal-close-btn" aria-label="Close modal">×</span>
         <h2 id="modalArticleTitle">Article Title</h2>
-        <div id="modalSummaryContent">
-          <!-- Summary, loading, or error message will be injected here by JS -->
-          <p class="loading-summary">Loading summary...</p>
+
+        <!-- Tabs Navigation -->
+        <div id="modalTabs">
+          <button class="modal-tab-btn active" data-tab="summary">
+            Summary
+          </button>
+          <button class="modal-tab-btn" data-tab="chat">
+            Chat with Article
+          </button>
         </div>
-        <div id="modalErrorContent" class="error-summary" style="display: none">
-          <!-- Error specific messages can go here -->
+
+        <!-- Tab Content Panels -->
+        <div id="modalTabContentPanels">
+          <!-- Summary Panel -->
+          <div id="modalSummaryPanel" class="modal-tab-panel active">
+            <div id="modalSummaryContent">
+              <p class="loading-summary">Loading summary...</p>
+            </div>
+            <div
+              id="modalErrorContent"
+              class="error-summary"
+              style="display: none"
+            ></div>
+          </div>
+
+          <!-- Chat Panel (New) -->
+          <div id="modalChatPanel" class="modal-tab-panel">
+            <div id="modalChatMessages">
+              <!-- Chat messages will appear here -->
+            </div>
+            <div id="modalChatInputArea">
+              <textarea
+                id="chatInput"
+                placeholder="Ask a question about the article..."
+                rows="2"
+              ></textarea>
+              <button id="sendChatBtn">Send</button>
+            </div>
+            <div
+              id="modalChatError"
+              class="error-summary"
+              style="display: none"
+            ></div>
+          </div>
         </div>
       </div>
     </div>
@@ -442,8 +605,22 @@
       const modal = $("#aiSummaryModal");
       const modalTitleEl = $("#modalArticleTitle");
       const modalSummaryEl = $("#modalSummaryContent");
-      const modalErrorEl = $("#modalErrorContent"); // For distinct error messages if needed
+      const modalErrorEl = $("#modalErrorContent");
       const modalCloseBtn = $(".modal-close-btn", modal);
+
+      const modalTabsContainer = $("#modalTabs");
+      const modalTabBtns = $all(".modal-tab-btn");
+      const modalTabPanels = $all(".modal-tab-panel");
+      const modalSummaryPanel = $("#modalSummaryPanel"); // Contains summary content and error
+      const modalChatPanel = $("#modalChatPanel");
+      const modalChatMessages = $("#modalChatMessages");
+      const chatInput = $("#chatInput");
+      const sendChatBtn = $("#sendChatBtn");
+      const modalChatError = $("#modalChatError");
+
+      /* ───────── STATE VARIABLES FOR CHAT ───────── */
+      let currentArticleFullText = null;
+      let chatConversationHistory = []; // Stores { role: 'user' | 'assistant', content: '...' }
 
       /* ───────── HELPERS ───────── */
       function parseHTML(html) {
@@ -661,7 +838,7 @@
 
         // From the HTML, we can see search results are in elements with class "ListPreview"
         // inside "SearchResult-ContentPreview" containers
-        const articles = doc.querySelectorAll(
+        let articles = doc.querySelectorAll(
           ".SearchResult-ContentPreview .ListPreview"
         );
 
@@ -843,7 +1020,7 @@
 
             // Extract the href attribute directly - this is the key fix
             const href = a.getAttribute("href");
-            console.log("Original href:", href);
+            // console.log("Original href:", href); // Keep for debugging if needed
 
             // Simply prepend the domain to the href which already has the full path
             const fullUrl = href.startsWith("http")
@@ -851,7 +1028,7 @@
               : "https://www.fiberopticsonline.com" +
                 (href.startsWith("/") ? href : "/" + href);
 
-            console.log("Full URL:", fullUrl);
+            // console.log("Full URL:", fullUrl); // Keep for debugging if needed
 
             return {
               source: "Fiber Optics Online",
@@ -984,7 +1161,7 @@
         console.log(`Fetching article content for: ${url}`);
         const doc = await fetchDoc(url);
         const extractedText = extractMainContent(doc, url);
-        console.log(extractedText);
+        // console.log(extractedText); // Can be noisy, uncomment for debugging
         return extractedText;
       }
 
@@ -1028,7 +1205,7 @@
           throw new Error(errorMessage);
         }
         const result = await response.json();
-        console.log("OpenAI API Success:", result);
+        // console.log("OpenAI API Success:", result); // Can be noisy
         if (
           result.choices &&
           result.choices.length > 0 &&
@@ -1042,48 +1219,161 @@
         }
       }
 
+      async function getOpenAIChatResponse(
+        articleContent,
+        history,
+        userQuestion,
+        apiKey
+      ) {
+        if (!articleContent) {
+          throw new Error("Article content is not available for chat.");
+        }
+        if (!userQuestion || userQuestion.trim() === "") {
+          throw new Error("Cannot send an empty question.");
+        }
+
+        const messages = [
+          {
+            role: "system",
+            content:
+              "You are a helpful AI assistant. You will answer questions based *solely* on the provided article text. If the information is not in the article, state that you cannot find the answer in the provided text. Do not use any external knowledge. Be concise.",
+          },
+          {
+            // Prime the AI with the article content
+            role: "user",
+            content: `Here is the article I want to discuss:\n\n---\n${articleContent}\n---\n\nNow, please answer my questions based on this article.`,
+          },
+          ...history, // Spread the existing chat history
+          {
+            role: "user",
+            content: userQuestion,
+          },
+        ];
+
+        console.log(
+          `Requesting chat response from OpenAI. History length: ${
+            history.length
+          }, Question: ${userQuestion.substring(0, 50)}...`
+        );
+
+        const response = await fetch(OPENAI_API_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: OPENAI_MODEL,
+            messages: messages,
+            max_tokens: 200, // Adjust as needed for chat responses
+            temperature: 0.3, // Lower for more factual, less creative responses
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({
+            error: { message: "Unknown API error or non-JSON response" },
+          }));
+          let errorMessage = `OpenAI API Error (Chat): ${response.status}`;
+          if (errorData.error && errorData.error.message)
+            errorMessage += ` - ${errorData.error.message}`;
+          if (
+            errorData.error &&
+            errorData.error.code === "insufficient_quota"
+          ) {
+            errorMessage =
+              "OpenAI API Error: Insufficient quota. Please check your OpenAI account balance/limits.";
+          }
+          console.error("OpenAI API Chat Error Response:", errorData);
+          throw new Error(errorMessage);
+        }
+        const result = await response.json();
+        if (
+          result.choices &&
+          result.choices.length > 0 &&
+          result.choices[0].message &&
+          result.choices[0].message.content
+        ) {
+          return result.choices[0].message.content.trim();
+        } else {
+          console.error("Unexpected OpenAI API chat response format:", result);
+          throw new Error("Could not parse chat response from OpenAI API.");
+        }
+      }
+
       function openModal(articleTitle, summaryPromise) {
         modal.classList.add("active");
         modalTitleEl.textContent = articleTitle;
+
+        // Reset and set up Summary tab by default
+        switchToTab("summary"); // This will also handle visibility of panels
         modalSummaryEl.innerHTML =
           '<p class="loading-summary">Generating summary...</p>';
-        modalSummaryEl.style.display = "block"; // Ensure summary area is visible
-        modalErrorEl.textContent = ""; // Clear previous errors
+        // modalSummaryEl.style.display = "block"; // Handled by switchToTab's panel.active
+        modalErrorEl.textContent = "";
         modalErrorEl.style.display = "none";
+
+        // Reset Chat tab
+        modalChatMessages.innerHTML = "";
+        chatInput.value = "";
+        modalChatError.style.display = "none";
+        // currentArticleFullText and chatConversationHistory are reset in handleOverviewClick
 
         summaryPromise
           .then((summary) => {
             modalSummaryEl.innerHTML = `<p>${summary.replace(
               /\n/g,
               "<br>"
-            )}</p>`; // Display summary
+            )}</p>`;
           })
           .catch((error) => {
             console.error(
               `Failed to get overview for "${articleTitle}":`,
               error
             );
-            modalSummaryEl.style.display = "none"; // Hide summary area on error
-            modalErrorEl.textContent = `Error: ${error.message}`;
+            modalSummaryEl.style.display = "none"; // Hide summary loading/content area
+            modalErrorEl.textContent = `Error generating summary: ${error.message}`;
             modalErrorEl.style.display = "block";
+
+            // If summary fails, article text might not be available for chat either.
+            if (!currentArticleFullText) {
+              const chatTabBtn = document.querySelector(
+                '.modal-tab-btn[data-tab="chat"]'
+              );
+              if (chatTabBtn) chatTabBtn.disabled = true;
+            }
           });
       }
 
       function closeModal() {
         modal.classList.remove("active");
-        // Reset modal content for next time (optional, but good practice)
-        modalTitleEl.textContent = "Article Title";
+        modalArticleTitle.textContent = "Article Title"; // Reset title
+
+        // Reset Summary tab
         modalSummaryEl.innerHTML =
           '<p class="loading-summary">Loading summary...</p>';
         modalErrorEl.textContent = "";
         modalErrorEl.style.display = "none";
+
+        // Reset Chat tab
+        modalChatMessages.innerHTML = "";
+        chatInput.value = "";
+        modalChatError.style.display = "none";
+        currentArticleFullText = null;
+        chatConversationHistory = [];
+
+        const chatTabBtn = document.querySelector(
+          '.modal-tab-btn[data-tab="chat"]'
+        );
+        if (chatTabBtn) chatTabBtn.disabled = false; // Re-enable chat tab button
+
+        switchToTab("summary"); // Ensure summary tab is active by default for next opening
       }
 
       async function handleOverviewClick(event) {
         const button = event.target;
         const url = button.dataset.url;
         const row = button.closest("tr");
-        // Ensure title is fetched correctly from the link inside the <td>
         const articleTitleText =
           row.cells[2].querySelector("a")?.textContent.trim() || "Article";
 
@@ -1094,12 +1384,18 @@
 
         const apiKey = getApiKey();
         if (!apiKey) {
-          modal.classList.add("active"); // Show modal to display API key error
-          modalTitleEl.textContent = articleTitleText;
+          switchToTab("summary"); // Ensure error message appears on summary tab
+          modal.classList.add("active");
+          modalArticleTitle.textContent = articleTitleText;
           modalSummaryEl.style.display = "none";
           modalErrorEl.textContent =
-            "OpenAI API Key needed to generate summary.";
+            "OpenAI API Key needed to generate summary and chat.";
           modalErrorEl.style.display = "block";
+          // modalChatPanel.style.display = "none"; // Handled by switchToTab
+          const chatTabBtn = document.querySelector(
+            '.modal-tab-btn[data-tab="chat"]'
+          );
+          if (chatTabBtn) chatTabBtn.disabled = true;
           return;
         }
 
@@ -1107,32 +1403,187 @@
         const originalButtonText = button.textContent;
         button.textContent = "Loading...";
 
+        // Reset chat state for the new article
+        currentArticleFullText = null;
+        chatConversationHistory = [];
+        modalChatMessages.innerHTML = ""; // Clear UI from previous article
+        chatInput.value = "";
+        const chatTabBtn = document.querySelector(
+          '.modal-tab-btn[data-tab="chat"]'
+        );
+        if (chatTabBtn) chatTabBtn.disabled = false; // Re-enable chat tab
+
         const summaryPromise = (async () => {
-          // This IIFE creates the promise that openModal will handle
           const articleText = await fetchArticleText(url);
-          if (!articleText || articleText.length < 50) {
+          currentArticleFullText = articleText; // Store for chat
+
+          if (!currentArticleFullText || currentArticleFullText.length < 50) {
+            if (chatTabBtn) chatTabBtn.disabled = true;
             throw new Error(
-              "Could not extract sufficient article text for summary."
+              "Could not extract sufficient article text for summary or chat."
             );
           }
-          return getOpenAISummary(articleText, apiKey);
+          return getOpenAISummary(currentArticleFullText, apiKey);
         })();
 
         openModal(articleTitleText, summaryPromise);
 
-        // Reset button once the process is handed off to the modal
-        // Or, better, use the promise's finally to reset button after modal content is loaded/failed
         summaryPromise.finally(() => {
           button.disabled = false;
           button.textContent = originalButtonText;
         });
       }
 
+      function switchToTab(tabName) {
+        modalTabBtns.forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.tab === tabName);
+        });
+        modalTabPanels.forEach((panel) => {
+          // Construct panel ID like modalSummaryPanel or modalChatPanel
+          const panelId = `modal${
+            tabName.charAt(0).toUpperCase() + tabName.slice(1)
+          }Panel`;
+          panel.classList.toggle("active", panel.id === panelId);
+        });
+
+        // If switching to chat, manage its state
+        if (tabName === "chat") {
+          modalChatError.style.display = "none"; // Clear previous chat errors
+          const chatTabButton = document.querySelector(
+            '.modal-tab-btn[data-tab="chat"]'
+          );
+          if (chatTabButton && chatTabButton.disabled) {
+            // If chat tab itself is disabled (e.g. no article text)
+            modalChatMessages.innerHTML =
+              '<p class="chat-message error">Article content not loaded. Chat is disabled.</p>';
+            chatInput.disabled = true;
+            sendChatBtn.disabled = true;
+          } else if (!currentArticleFullText) {
+            modalChatMessages.innerHTML =
+              '<p class="chat-message error">Article content not available. Cannot start chat.</p>';
+            chatInput.disabled = true;
+            sendChatBtn.disabled = true;
+          } else if (modalChatMessages.innerHTML.trim() === "") {
+            modalChatMessages.innerHTML =
+              '<p class="chat-message assistant" style="text-align:center;">Ask me anything about the article!</p>';
+            chatInput.disabled = false;
+            sendChatBtn.disabled = false;
+          } else {
+            chatInput.disabled = false;
+            sendChatBtn.disabled = false;
+          }
+        } else if (tabName === "summary") {
+          // Ensure summary error display is visible if it has content
+          if (modalErrorEl.textContent.trim() !== "") {
+            modalErrorEl.style.display = "block";
+          }
+        }
+      }
+
+      modalTabsContainer.addEventListener("click", (event) => {
+        if (event.target.matches(".modal-tab-btn") && !event.target.disabled) {
+          switchToTab(event.target.dataset.tab);
+        }
+      });
+
+      function addChatMessage(message, type) {
+        // type = 'user', 'assistant', 'error', 'loading-chat'
+        const messageEl = document.createElement("div");
+        messageEl.classList.add("chat-message", type);
+        // Sanitize message slightly to prevent basic HTML injection if AI misbehaves,
+        // but allow <br> for formatting.
+        const tempDiv = document.createElement("div");
+        tempDiv.textContent = message;
+        messageEl.innerHTML = tempDiv.innerHTML.replace(/\n/g, "<br>");
+
+        const existingPlaceholder = modalChatMessages.querySelector(
+          '.assistant[style*="text-align:center"], .error'
+        );
+        if (existingPlaceholder && (type === "user" || type === "assistant")) {
+          if (
+            modalChatMessages.children.length === 1 &&
+            (existingPlaceholder.textContent.includes("Ask me anything") ||
+              existingPlaceholder.textContent.includes("Article content not") ||
+              existingPlaceholder.textContent.includes("Chat is disabled"))
+          ) {
+            modalChatMessages.innerHTML = ""; // Clear placeholder
+          }
+        }
+
+        modalChatMessages.appendChild(messageEl);
+        modalChatMessages.scrollTop = modalChatMessages.scrollHeight;
+      }
+
+      async function handleSendChatMessage() {
+        const question = chatInput.value.trim();
+        if (!question) return;
+
+        const apiKey = getApiKey();
+        if (!apiKey) {
+          addChatMessage(
+            "OpenAI API Key is not set. Please configure it first.",
+            "error"
+          );
+          return;
+        }
+
+        if (!currentArticleFullText) {
+          addChatMessage("Article content is not available for chat.", "error");
+          return;
+        }
+
+        addChatMessage(question, "user");
+        chatConversationHistory.push({ role: "user", content: question });
+        chatInput.value = "";
+        chatInput.disabled = true;
+        sendChatBtn.disabled = true;
+        addChatMessage("Thinking...", "loading-chat");
+
+        try {
+          const assistantResponse = await getOpenAIChatResponse(
+            currentArticleFullText,
+            chatConversationHistory,
+            question,
+            apiKey
+          );
+
+          const loadingIndicator =
+            modalChatMessages.querySelector(".loading-chat");
+          if (loadingIndicator) loadingIndicator.remove();
+
+          addChatMessage(assistantResponse, "assistant");
+          chatConversationHistory.push({
+            role: "assistant",
+            content: assistantResponse,
+          });
+        } catch (error) {
+          console.error("Chat API error:", error);
+          const loadingIndicator =
+            modalChatMessages.querySelector(".loading-chat");
+          if (loadingIndicator) loadingIndicator.remove();
+          addChatMessage(`Error: ${error.message}`, "error");
+          // Display error in the dedicated chat error area as well for persistence
+          modalChatError.textContent = `Chat Error: ${error.message}`;
+          modalChatError.style.display = "block";
+        } finally {
+          chatInput.disabled = false;
+          sendChatBtn.disabled = false;
+          chatInput.focus();
+        }
+      }
+
+      sendChatBtn.addEventListener("click", handleSendChatMessage);
+      chatInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          handleSendChatMessage();
+        }
+      });
+
       // Modal close event listeners
       modalCloseBtn.addEventListener("click", closeModal);
       window.addEventListener("click", (event) => {
         if (event.target === modal) {
-          // Clicked on the modal backdrop
           closeModal();
         }
       });
@@ -1152,7 +1603,7 @@
       $("#saveApiKeyBtn").addEventListener("click", () => {
         const keyInput = $("#apiKeyInput");
         if (saveApiKey(keyInput.value)) {
-          // keyInput.value = '';
+          // keyInput.value = ''; // Optional: clear after save
         } else if (!keyInput.value.trim()) {
           $("#apiKeyStatus").textContent = "Please enter a key.";
           $("#apiKeyStatus").style.color = "var(--error)";
@@ -1233,7 +1684,7 @@
         const btn = $("#fetchBtn"),
           statusEl = $("#status"),
           table = $("#news"),
-          tbody = $("#news tbody"); // Renamed status to statusEl
+          tbody = $("#news tbody");
         btn.disabled = true;
         statusEl.textContent = "Fetching…";
         tbody.innerHTML = "";
@@ -1279,7 +1730,6 @@
             <button class="overview-btn" data-url="${
               r.article_url
             }">AI Overview</button>
-            <!-- Removed inline summary span -->
         </td>`;
             tbody.appendChild(tr);
           });
@@ -1288,7 +1738,7 @@
           statusEl.textContent = `Showing ${
             records.length
           } articles (updated ${dayjs().format("HH:mm")})`;
-          clearSearch();
+          clearSearch(); // Will also call filterArticles
         } catch (err) {
           console.error("Error during fetchNews execution:", err);
           statusEl.textContent = "Error fetching data. Check console.";
@@ -1297,13 +1747,14 @@
           table.hidden = true;
         } finally {
           btn.disabled = false;
-          filterArticles();
+          filterArticles(); // Ensure UI is consistent after fetch
         }
       }
 
       /* ───────── TABLE SORTING ───────── */
       $all("th").forEach((th, headerIndex) => {
         if (headerIndex === 3) {
+          // AI Overview column, not sortable
           th.style.cursor = "default";
           return;
         }
@@ -1317,25 +1768,28 @@
             const cellA = rowA.cells[headerIndex]?.innerText || "";
             const cellB = rowB.cells[headerIndex]?.innerText || "";
             if (headerIndex === 0) {
+              // Date column
               const dateA = dayjs(cellA, "YYYY-MM-DD").toDate();
               const dateB = dayjs(cellB, "YYYY-MM-DD").toDate();
               if (dateA < dateB) return -1 * sortDirection;
               if (dateA > dateB) return 1 * sortDirection;
               return 0;
             } else {
+              // Text columns
               return cellA.localeCompare(cellB) * sortDirection;
             }
           });
           currentRows.forEach((row) => tableBody.appendChild(row));
           $all("th").forEach((header, idx) => {
             if (idx !== 3) {
+              // Don't change AI Overview header
               header.textContent = header.textContent
                 .replace(/[▲▼]/, "")
                 .trim();
             }
           });
           th.textContent += sortDirection === 1 ? " ▲" : " ▼";
-          filterArticles();
+          filterArticles(); // Re-apply search filter if any
         };
       });
     </script>
