@@ -32,13 +32,12 @@
   button{
     background:var(--accent);color:#fff;border:none;border-radius:8px;
     padding:.6rem 1.2rem;font-size:1rem;cursor:pointer;transition:.2s;
-    line-height: 1.2; /* Added for consistency */
+    line-height: 1.2;
   }
   button:disabled{opacity:.55;cursor:progress}
   button:hover:not(:disabled){filter:brightness(1.08)}
   #status{font-size:.95rem;color:#444;margin-left:auto}
 
-  /* Search bar styling */
   #searchWrapper {
     position: relative;
     display: flex;
@@ -74,7 +73,6 @@
     color: #333;
   }
 
-  /* API Key Settings */
   #apiKeySettings {
     margin-top: 0.5rem;
     margin-bottom: 1rem;
@@ -103,7 +101,7 @@
   #apiKeySettings button {
     padding: 0.4rem 0.8rem;
     font-size: 0.9rem;
-    background-color: #4CAF50; /* Green for save */
+    background-color: #4CAF50;
   }
   #apiKeyStatus { color: var(--text-light); font-style: italic; }
 
@@ -117,7 +115,6 @@
   a{color:var(--accent);text-decoration:none}
   a:hover{text-decoration:underline}
 
-  /* Overview button and summary styling */
   .overview-btn {
     padding: 0.3rem 0.6rem;
     font-size: 0.85rem;
@@ -125,21 +122,6 @@
     white-space: nowrap;
   }
   .overview-btn:disabled { background-color: #999; filter: none; }
-  .summary-output {
-    display: block; /* Changed from inline-block */
-    margin-top: 0.5rem; /* Added margin */
-    font-size: 0.85rem;
-    color: var(--text-light);
-    max-height: 100px; /* Limit initial height */
-    overflow-y: auto; /* Allow scrolling for long summaries */
-    background-color: #f0f0f0;
-    padding: 0.4rem;
-    border-radius: 4px;
-    line-height: 1.3;
-    border: 1px solid var(--border);
-  }
-  .summary-output.error { color: var(--error); }
-  .summary-output.loading { font-style: italic; }
 
   #noResults {
     text-align: center;
@@ -150,24 +132,90 @@
     display: none;
   }
   
-  /* Adjust column widths in the table */
   th:nth-child(1), td:nth-child(1) { width: 100px; } /* Date */
   th:nth-child(2), td:nth-child(2) { width: 110px; } /* Source */
-  th:nth-child(3), td:nth-child(3) { } /* Title - flexible width */
-  th:nth-child(4), td:nth-child(4) { width: 150px; } /* AI Overview - fixed width */
+  th:nth-child(3), td:nth-child(3) { } 
+  th:nth-child(4), td:nth-child(4) { width: 150px; } 
   
-  @media(max-width:768px){ /* Adjusted breakpoint */
-     th:nth-child(3),td:nth-child(3){ /* Title */
-         /* Keep title full width */
-     }
-     th:nth-child(4),td:nth-child(4){ /* AI Overview */
-         width: 120px; /* Reduce width on smaller screens */
-     }
-     th:nth-child(1),td:nth-child(1){width:90px} /* Date */
-     th:nth-child(2),td:nth-child(2){width:110px} /* Source */
+  /* Modal Styles */
+  .modal {
+    display: none; /* Hidden by default, JS will toggle */
+    position: fixed; 
+    z-index: 1000; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; /* Should not be needed if modal-content handles scroll */
+    background-color: rgba(0,0,0,0.6); 
+    /* Flexbox for centering */
+    align-items: center; 
+    justify-content: center;
+  }
+  .modal.active {
+    display: flex; /* Use flex to show and center */
+  }
+  .modal-content {
+    background-color: #fefefe;
+    margin: auto; /* Fallback if flex not fully supported or for older interpretation */
+    padding: 25px;
+    border: 1px solid #888;
+    width: 80%; 
+    max-width: 700px; 
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative; 
+    max-height: 85vh; /* Limit height */
+    display: flex; /* For internal layout */
+    flex-direction: column;
+  }
+  #modalArticleTitle {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-dark);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.75rem;
+    flex-shrink: 0; /* Prevent title from shrinking */
+  }
+  #modalSummaryContent {
+    overflow-y: auto; /* Allow summary to scroll */
+    line-height: 1.6;
+    margin-top: 10px; /* Space between title and summary */
+    flex-grow: 1; /* Allow this area to take up available space */
+    min-height: 50px; /* Ensure some space even if empty initially */
+  }
+  .modal-close-btn {
+    color: #aaa;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+  }
+  .modal-close-btn:hover,
+  .modal-close-btn:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .loading-summary, .error-summary {
+    font-style: italic;
+    color: var(--text-light);
+    padding: 10px 0;
+  }
+  .error-summary {
+    color: var(--error);
+    font-weight: bold;
+  }
 
-     .overview-btn { margin-bottom: 0.3rem; }
-     .summary-output { max-width: 100%; } /* Ensure it doesn't overflow */
+
+  @media(max-width:768px){
+     th:nth-child(4),td:nth-child(4){ width: 120px; }
+     th:nth-child(1),td:nth-child(1){width:90px}
+     th:nth-child(2),td:nth-child(2){width:110px}
+     .modal-content { width: 90%; padding: 20px; }
+     #modalArticleTitle { font-size: 1.3rem; }
   }
   @media(max-width:600px){
     #controls { flex-direction: column; align-items: stretch; }
@@ -175,14 +223,11 @@
     #status { margin-left: 0; text-align: center; margin-top: 0.5rem; }
     #apiKeySettings { flex-direction: column; align-items: stretch; }
     #apiKeyInput { min-width: unset; }
-    /* Mobile table adjustments might be needed depending on content */
     th, td { padding: 0.5rem; font-size: 0.9rem;}
-    th:nth-child(3), td:nth-child(3) { /* Title - less padding */ padding-right: 0.5rem;}
-    th:nth-child(4), td:nth-child(4) { /* AI Overview */ 
-      padding-left: 0.5rem;
-      width: 100px; /* Further reduce width on mobile */
-    }
-    .summary-output { font-size: 0.8rem; max-height: 80px; }
+    th:nth-child(3), td:nth-child(3) { padding-right: 0.5rem;}
+    th:nth-child(4), td:nth-child(4) { padding-left: 0.5rem; width: 100px; }
+    .modal-content { width: 95%; padding: 15px; max-height: 90vh; }
+    #modalArticleTitle { font-size: 1.1rem; margin-bottom: 0.75rem; padding-bottom: 0.5rem; }
   }
 </style>
 </head>
@@ -192,19 +237,16 @@
 
   <div id="controls">
     <button id="fetchBtn">Fetch latest news</button>
-
     <div id="searchWrapper">
       <input type="text" id="searchInput" placeholder="Search articles..." aria-label="Search articles">
       <button id="clearSearch" aria-label="Clear search">×</button>
     </div>
-
     <span id="status"></span>
   </div>
 
-  <!-- API Key Section -->
   <div id="apiKeySettings">
-      <label for="apiKeyInput">HF API Key:</label>
-      <input type="password" id="apiKeyInput" placeholder="Paste your Hugging Face API Key (stored locally)">
+      <label for="apiKeyInput">OpenAI API Key:</label>
+      <input type="password" id="apiKeyInput" placeholder="Paste your OpenAI API Key (stored locally)">
       <button id="saveApiKeyBtn">Save Key</button>
       <span id="apiKeyStatus"></span>
   </div>
@@ -216,33 +258,56 @@
       <th data-key="article_date">Date ▼</th>
       <th data-key="source">Source</th>
       <th data-key="article_title">Title</th>
-      <th>AI Overview</th> <!-- Changed from "Overview" to "AI Overview" -->
+      <th>AI Overview</th>
     </tr></thead>
     <tbody><!-- Content added by JS --></tbody>
   </table>
 </main>
 
+<!-- AI Summary Modal -->
+<div id="aiSummaryModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close-btn" aria-label="Close modal">×</span>
+    <h2 id="modalArticleTitle">Article Title</h2>
+    <div id="modalSummaryContent">
+      <!-- Summary, loading, or error message will be injected here by JS -->
+      <p class="loading-summary">Loading summary...</p>
+    </div>
+    <div id="modalErrorContent" class="error-summary" style="display:none;">
+      <!-- Error specific messages can go here -->
+    </div>
+  </div>
+</div>
+
+
 <script>
 /* ───────── CONFIG ───────── */
-const CORS_PROXY = "https://api.allorigins.win/raw?url="; // NOTE: This free proxy has limitations
-const N_ARTICLES = 10; // Per source
+const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+const N_ARTICLES = 10;
 const CUTOFF = dayjs().subtract(90,"day").toDate();
-const HF_API_KEY_STORAGE = "hfApiKey";
-const HF_SUMMARIZATION_MODEL = "facebook/bart-large-cnn"; // You can change this model if needed
-const HF_API_URL = `https://api-inference.huggingface.co/models/${HF_SUMMARIZATION_MODEL}`;
+const OPENAI_API_KEY_STORAGE = "openaiApiKey";
+const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_MODEL = "gpt-3.5-turbo";
 
-/* ───────── HELPERS ───────── */
+/* ───────── DOM ELEMENTS ───────── */
 const $ = (sel, root=document) => root.querySelector(sel);
 const $all = (sel, root=document) => [...root.querySelectorAll(sel)];
+const modal = $("#aiSummaryModal");
+const modalTitleEl = $("#modalArticleTitle");
+const modalSummaryEl = $("#modalSummaryContent");
+const modalErrorEl = $("#modalErrorContent"); // For distinct error messages if needed
+const modalCloseBtn = $(".modal-close-btn", modal);
+
+
+/* ───────── HELPERS ───────── */
 function parseHTML(html){return new DOMParser().parseFromString(html,"text/html");}
-async function fetchDoc(url, options = {}){ // Added options for potential future use
+async function fetchDoc(url, options = {}){
   try {
     const response = await fetch(CORS_PROXY+encodeURIComponent(url), options);
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
     const text = await response.text();
-    // Handle potential allorigins error messages embedded in the response
     if (text.includes("allorigins error") || text.includes("target server error")) {
         console.warn(`CORS Proxy error for ${url}: ${text.substring(0, 100)}...`);
         throw new Error("CORS Proxy error fetching content.");
@@ -250,7 +315,7 @@ async function fetchDoc(url, options = {}){ // Added options for potential futur
     return parseHTML(text);
   } catch (error) {
       console.error(`Error fetching document ${url}:`, error);
-      throw error; // Re-throw to be caught by caller
+      throw error;
   }
 }
 function keepDate(d){return d && d >= CUTOFF;}
@@ -265,13 +330,13 @@ function tryParse(raw,...fmts){
 
 /* ───────── API Key Management ───────── */
 function getApiKey() {
-    let key = localStorage.getItem(HF_API_KEY_STORAGE);
+    let key = localStorage.getItem(OPENAI_API_KEY_STORAGE);
     if (!key) {
-        key = prompt("Please enter your Hugging Face API Key for summarization.\nIt will be stored locally in your browser.");
+        key = prompt("Please enter your OpenAI API Key for summarization.\nIt will be stored locally in your browser.");
         if (key) {
             saveApiKey(key);
         } else {
-            return null; // User cancelled
+            return null; 
         }
     }
     return key;
@@ -279,29 +344,29 @@ function getApiKey() {
 
 function saveApiKey(key) {
     if (key && typeof key === 'string' && key.trim()) {
-        localStorage.setItem(HF_API_KEY_STORAGE, key.trim());
-        updateApiKeyStatus(true); // Indicate saved
-        $("#apiKeyInput").value = key.trim(); // Update input field as well
+        localStorage.setItem(OPENAI_API_KEY_STORAGE, key.trim());
+        updateApiKeyStatus(true);
+        $("#apiKeyInput").value = key.trim();
         return true;
     }
-    updateApiKeyStatus(false); // Indicate not saved/invalid
+    updateApiKeyStatus(false);
     return false;
 }
 
 function updateApiKeyStatus(isSet) {
     const statusEl = $("#apiKeyStatus");
     if (isSet) {
-        statusEl.textContent = "Key saved locally.";
+        statusEl.textContent = "OpenAI Key saved locally.";
         statusEl.style.color = "green";
     } else {
-        const currentKey = localStorage.getItem(HF_API_KEY_STORAGE);
-        statusEl.textContent = currentKey ? "Key saved locally." : "Key not set.";
-         statusEl.style.color = currentKey ? "green" : "var(--text-light)";
+        const currentKey = localStorage.getItem(OPENAI_API_KEY_STORAGE);
+        statusEl.textContent = currentKey ? "OpenAI Key saved locally." : "OpenAI Key not set.";
+        statusEl.style.color = currentKey ? "green" : "var(--text-light)";
     }
 }
 
 
-/* ───────── 12 SCRAPERS (Unchanged - Preserving Original Logic) ───────── */
+/* ───────── 12 SCRAPERS (Unchanged) ───────── */
 async function scrape_ntia(){
   const doc=await fetchDoc("https://broadbandusa.ntia.gov/news/latest-news");
   return $all("div.views-row",doc).slice(0,N_ARTICLES).map(row=>{
@@ -366,11 +431,8 @@ async function scrape_rcrwireless(){
     const par=b.parentElement;
     const title=$("h3.entry-title a",par);
     const d=tryParse($("time.entry-date",par)?.dateTime,"YYYY-MM-DD");
-    const author=$("span.td-post-author-name",par);
-    const excerpt=$("div.td-excerpt",par);
     if(!title||!keepDate(d))return null;
-    return{source:"RCR Wireless",article_title:title.textContent.trim(),article_url:title.href,
-      article_date:d,author:author?.textContent.trim()||null,excerpt:excerpt?.textContent.trim()||null};
+    return{source:"RCR Wireless",article_title:title.textContent.trim(),article_url:title.href,article_date:d};
   }).filter(Boolean);
 }
 async function scrape_lightwave(){
@@ -430,170 +492,163 @@ const SCRAPERS=[
 ];
 
 
-/* ───────── AI Summarization ───────── */
-
-// Basic content extraction - VERY LIKELY TO NEED ADJUSTMENT PER SITE
+/* ───────── AI Summarization & Modal ───────── */
 function extractMainContent(doc) {
-    const selectors = [
-        'article',
-        'main',
-        '.main-content',
-        '.post-content',
-        '.entry-content',
-        '.article-body',
-        '.story-content',
-        'div[role="main"]'
-    ];
+    const selectors = ['article','main','.main-content','.post-content','.entry-content','.article-body','.story-content','div[role="main"]'];
     let mainEl = null;
-    for (const selector of selectors) {
-        mainEl = doc.querySelector(selector);
-        if (mainEl) break;
-    }
-    if (!mainEl) mainEl = doc.body; // Fallback to body
-
-    // Get all paragraphs within the main element
+    for (const selector of selectors) { mainEl = doc.querySelector(selector); if (mainEl) break; }
+    if (!mainEl) mainEl = doc.body;
     const paragraphs = $all('p', mainEl);
     let text = paragraphs.map(p => p.textContent.trim()).join('\n');
-
-    // Basic cleanup
-    text = text.replace(/\s{2,}/g, ' '); // Replace multiple spaces/newlines with single space
-    text = text.trim();
-
-    // Limit length to avoid overly long inputs for the API (e.g., ~10k chars)
-    const MAX_LENGTH = 10000;
+    text = text.replace(/\s{2,}/g, ' ').trim();
+    const MAX_LENGTH = 10000; 
     if (text.length > MAX_LENGTH) {
         console.warn("Extracted text truncated for API call.");
         text = text.substring(0, MAX_LENGTH) + "...";
     }
-
-    if (text.length < 100) { // Arbitrary minimum length
-        console.warn("Extracted text seems very short, might be inaccurate.");
-    }
-
+    if (text.length < 100) console.warn("Extracted text seems very short.");
     return text;
 }
 
 async function fetchArticleText(url) {
     console.log(`Fetching article content for: ${url}`);
-    const doc = await fetchDoc(url); // Uses the existing helper with CORS proxy
+    const doc = await fetchDoc(url);
     return extractMainContent(doc);
 }
 
-async function getHuggingFaceSummary(text, apiKey) {
-    if (!text) {
-        throw new Error("No text content provided for summarization.");
+async function getOpenAISummary(text, apiKey) {
+    if (!text) throw new Error("No text content provided for summarization.");
+    console.log(`Requesting summary from OpenAI for ${text.length} chars...`);
+    const response = await fetch(OPENAI_API_URL, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: OPENAI_MODEL,
+            messages: [
+                { role: "system", content: "You are a helpful assistant. Summarize the provided news article text concisely, focusing on the key information. Aim for a summary of 2-4 bullet points. Clearly structure the response as bullet points." },
+                { role: "user", content: text }
+            ],
+            max_tokens: 150, temperature: 0.5
+        })
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: 'Unknown API error or non-JSON response' } }));
+        let errorMessage = `OpenAI API Error: ${response.status}`;
+        if (errorData.error && errorData.error.message) errorMessage += ` - ${errorData.error.message}`;
+        if (errorData.error && errorData.error.code === 'insufficient_quota') errorMessage = "OpenAI API Error: Insufficient quota. Please check your OpenAI account balance/limits.";
+        console.error("OpenAI API Error Response:", errorData);
+        throw new Error(errorMessage);
     }
-    console.log(`Requesting summary from HF for ${text.length} chars...`);
+    const result = await response.json();
+    console.log("OpenAI API Success:", result);
+    if (result.choices && result.choices.length > 0 && result.choices[0].message && result.choices[0].message.content) {
+        return result.choices[0].message.content.trim();
+    } else {
+        console.error("Unexpected OpenAI API response format:", result);
+        throw new Error("Could not parse summary from OpenAI API response.");
+    }
+}
 
-    try {
-        const response = await fetch(HF_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                inputs: text,
-                parameters: { // Optional: Adjust summary length
-                    min_length: 30,
-                    max_length: 150
-                }
-            })
+function openModal(articleTitle, summaryPromise) {
+    modal.classList.add('active');
+    modalTitleEl.textContent = articleTitle;
+    modalSummaryEl.innerHTML = '<p class="loading-summary">Generating summary...</p>';
+    modalSummaryEl.style.display = "block"; // Ensure summary area is visible
+    modalErrorEl.textContent = ""; // Clear previous errors
+    modalErrorEl.style.display = "none";
+
+    summaryPromise
+        .then(summary => {
+            modalSummaryEl.innerHTML = `<p>${summary.replace(/\n/g, "<br>")}</p>`; // Display summary
+        })
+        .catch(error => {
+            console.error(`Failed to get overview for "${articleTitle}":`, error);
+            modalSummaryEl.style.display = "none"; // Hide summary area on error
+            modalErrorEl.textContent = `Error: ${error.message}`;
+            modalErrorEl.style.display = "block";
         });
+}
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown API error' }));
-             let errorMessage = `HF API Error: ${response.status}`;
-             if (errorData.error) {
-                 errorMessage += ` - ${errorData.error}`;
-             }
-             // Specific check for model loading
-             if (errorData.error && errorData.error.includes("currently loading")) {
-                 errorMessage = "Model is loading, try again shortly.";
-             }
-             console.error("HF API Error Response:", errorData);
-             throw new Error(errorMessage);
-        }
-
-        const result = await response.json();
-        console.log("HF API Success:", result);
-
-        // The result format might be [{ summary_text: "..." }]
-        if (Array.isArray(result) && result.length > 0 && result[0].summary_text) {
-            return result[0].summary_text;
-        } else if (result.summary_text) { // Or just { summary_text: "..." }
-             return result.summary_text;
-        } else {
-            console.error("Unexpected HF API response format:", result);
-            throw new Error("Could not parse summary from API response.");
-        }
-    } catch (error) {
-        console.error('Error fetching summary from Hugging Face:', error);
-        throw error; // Re-throw to be handled by the click handler
-    }
+function closeModal() {
+    modal.classList.remove('active');
+    // Reset modal content for next time (optional, but good practice)
+    modalTitleEl.textContent = "Article Title";
+    modalSummaryEl.innerHTML = '<p class="loading-summary">Loading summary...</p>';
+    modalErrorEl.textContent = "";
+    modalErrorEl.style.display = "none";
 }
 
 async function handleOverviewClick(event) {
     const button = event.target;
-    const outputSpan = button.nextElementSibling; // Assumes span is immediately after
     const url = button.dataset.url;
+    const row = button.closest('tr');
+    // Ensure title is fetched correctly from the link inside the <td>
+    const articleTitleText = row.cells[2].querySelector('a')?.textContent.trim() || "Article";
 
-    if (!url || !outputSpan) {
-        console.error("Missing URL or output span for overview button.");
+
+    if (!url) {
+        console.error("Missing URL for overview button.");
         return;
     }
 
     const apiKey = getApiKey();
     if (!apiKey) {
-        outputSpan.textContent = "API Key needed.";
-        outputSpan.className = 'summary-output error';
+        modal.classList.add('active'); // Show modal to display API key error
+        modalTitleEl.textContent = articleTitleText;
+        modalSummaryEl.style.display = "none";
+        modalErrorEl.textContent = "OpenAI API Key needed to generate summary.";
+        modalErrorEl.style.display = "block";
         return;
     }
 
     button.disabled = true;
+    const originalButtonText = button.textContent;
     button.textContent = "Loading...";
-    outputSpan.textContent = "Fetching article content...";
-    outputSpan.className = 'summary-output loading';
-    outputSpan.style.display = 'block'; // Ensure it's visible
 
-    try {
+    const summaryPromise = (async () => {
+        // This IIFE creates the promise that openModal will handle
         const articleText = await fetchArticleText(url);
-        if (!articleText || articleText.length < 50) { // Check for minimal content
-             throw new Error("Could not extract sufficient article text.");
+        if (!articleText || articleText.length < 50) {
+             throw new Error("Could not extract sufficient article text for summary.");
         }
+        return getOpenAISummary(articleText, apiKey);
+    })();
 
-        outputSpan.textContent = "Generating summary...";
-        const summary = await getHuggingFaceSummary(articleText, apiKey);
+    openModal(articleTitleText, summaryPromise);
 
-        outputSpan.textContent = summary;
-        outputSpan.className = 'summary-output';
-        button.textContent = "AI Overview"; // Changed from "Overview" to "AI Overview"
-
-    } catch (error) {
-        console.error(`Failed to get overview for ${url}:`, error);
-        outputSpan.textContent = `Error: ${error.message}`;
-        outputSpan.className = 'summary-output error';
-        button.textContent = "Retry"; // Allow retry
-    } finally {
+    // Reset button once the process is handed off to the modal
+    // Or, better, use the promise's finally to reset button after modal content is loaded/failed
+    summaryPromise.finally(() => {
         button.disabled = false;
-    }
+        button.textContent = originalButtonText;
+    });
 }
+
+// Modal close event listeners
+modalCloseBtn.addEventListener("click", closeModal);
+window.addEventListener("click", (event) => {
+  if (event.target === modal) { // Clicked on the modal backdrop
+    closeModal();
+  }
+});
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && modal.classList.contains('active')) {
+    closeModal();
+  }
+});
 
 
 /* ───────── UI HANDLERS ───────── */
 $("#fetchBtn").addEventListener("click", fetchNews);
 window.addEventListener("load", () => {
-    // Set initial API Key status message and load news
-    updateApiKeyStatus(!!localStorage.getItem(HF_API_KEY_STORAGE));
+    updateApiKeyStatus(!!localStorage.getItem(OPENAI_API_KEY_STORAGE));
     fetchNews();
 });
 
-// API Key Save Button
 $("#saveApiKeyBtn").addEventListener("click", () => {
     const keyInput = $("#apiKeyInput");
     if (saveApiKey(keyInput.value)) {
-        // Optionally clear the input after save, or keep it visible
-        // keyInput.value = '';
+        // keyInput.value = ''; 
     } else if (!keyInput.value.trim()) {
          $("#apiKeyStatus").textContent = "Please enter a key.";
          $("#apiKeyStatus").style.color = "var(--error)";
@@ -602,14 +657,12 @@ $("#saveApiKeyBtn").addEventListener("click", () => {
         $("#apiKeyStatus").style.color = "var(--error)";
     }
 });
-// Update status if user manually clears input
 $("#apiKeyInput").addEventListener("input", () => {
     if (!$("#apiKeyInput").value.trim()) {
-        updateApiKeyStatus(!!localStorage.getItem(HF_API_KEY_STORAGE)); // Reset to saved status or 'not set'
+        updateApiKeyStatus(!!localStorage.getItem(OPENAI_API_KEY_STORAGE));
     }
 });
 
-// Event delegation for overview buttons
 $("#news tbody").addEventListener("click", (event) => {
     if (event.target.classList.contains("overview-btn")) {
         handleOverviewClick(event);
@@ -636,38 +689,26 @@ function filterArticles() {
   const rows = $all("#news tbody tr");
   let matchCount = 0;
 
-  // Show/hide clear button
   clearSearchBtn.style.display = searchTerm ? "block" : "none";
 
   rows.forEach(row => {
     const title = row.cells[2].textContent.toLowerCase();
     const source = row.cells[1].textContent.toLowerCase();
     const date = row.cells[0].textContent.toLowerCase();
-
-    // Match title, source, or date
-    const isMatch = title.includes(searchTerm) ||
-                   source.includes(searchTerm) ||
-                   date.includes(searchTerm);
-
+    const isMatch = title.includes(searchTerm) || source.includes(searchTerm) || date.includes(searchTerm);
     row.classList.toggle("hidden", !isMatch);
     if (isMatch) matchCount++;
   });
 
-  // Show/hide no results message
-  noResultsDiv.style.display = matchCount === 0 && rows.length > 0 && searchTerm ? "block" : "none"; // Only show if rows exist but none match search
-
-  // Show/hide table based on search results and total rows
+  noResultsDiv.style.display = matchCount === 0 && rows.length > 0 && searchTerm ? "block" : "none";
   const tableShouldBeVisible = rows.length > 0 && (matchCount > 0 || !searchTerm);
   $("#news").style.display = tableShouldBeVisible ? "table" : "none";
-  if (!tableShouldBeVisible && !(matchCount === 0 && rows.length > 0 && searchTerm)) { // Hide noResults if table itself is hidden for other reasons
+  if (!tableShouldBeVisible && !(matchCount === 0 && rows.length > 0 && searchTerm)) {
       noResultsDiv.style.display = "none";
   }
 
-
-  // Update status message
   const status = $("#status");
-  const totalRows = $all("#news tbody tr:not(.hidden)").length; // Count only visible rows after filtering
-  const absoluteTotal = $all("#news tbody tr").length; // Get total fetched before filtering
+  const absoluteTotal = $all("#news tbody tr").length;
   if (searchTerm) {
     status.textContent = `Found ${matchCount} matching articles (${absoluteTotal} total)`;
   } else {
@@ -676,116 +717,94 @@ function filterArticles() {
 }
 
 async function fetchNews(){
-  const btn=$("#fetchBtn"),status=$("#status"),table=$("#news"),tbody=$("#news tbody");
-  btn.disabled=true; status.textContent="Fetching…";
-  tbody.innerHTML = ""; // Clear previous results
-  table.hidden = true; // Hide table while fetching
-  noResultsDiv.style.display = "none"; // Hide no results message
+  const btn=$("#fetchBtn"),statusEl=$("#status"),table=$("#news"),tbody=$("#news tbody"); // Renamed status to statusEl
+  btn.disabled=true; statusEl.textContent="Fetching…";
+  tbody.innerHTML = "";
+  table.hidden = true;
+  noResultsDiv.style.display = "none";
 
   try{
-    // Wrap scraper calls in error handling
     const results = await Promise.allSettled(SCRAPERS.map(fn => fn().catch(err => {
-        // Catch errors within individual scrapers
         console.error(`Error in scraper ${fn.name}:`, err);
-        return []; // Return empty array on error for this source
+        return [];
     })));
 
     const records = results
-        .filter(result => result.status === 'fulfilled') // Keep only successful scrapes
-        .map(result => result.value) // Get the array of articles
-        .flat() // Flatten the array of arrays
-        .filter(Boolean) // Ensure no null/undefined items remain
-        .sort((a,b)=>b.article_date-a.article_date); // Sort by date descending
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value)
+        .flat()
+        .filter(Boolean)
+        .sort((a,b)=>b.article_date-a.article_date);
 
-    tbody.innerHTML=""; // Clear again just in case
+    tbody.innerHTML="";
     if (records.length === 0) {
-        status.textContent = "No articles found or all scrapers failed.";
+        statusEl.textContent = "No articles found or all scrapers failed.";
         noResultsDiv.textContent = "Could not fetch any articles. Check console for errors.";
         noResultsDiv.style.display = "block";
         table.hidden = true;
-        return; // Stop if no records
+        return;
     }
 
     records.forEach(r=>{
       const tr=document.createElement("tr");
-      // Changed button text from "Overview" to "AI Overview"
       tr.innerHTML=`
         <td>${dayjs(r.article_date).format("YYYY‑MM‑DD")}</td>
         <td>${r.source}</td>
         <td><a href="${r.article_url}" target="_blank" rel="noopener">${r.article_title}</a></td>
         <td>
             <button class="overview-btn" data-url="${r.article_url}">AI Overview</button>
-            <span class="summary-output" style="display: none;"></span>
+            <!-- Removed inline summary span -->
         </td>`;
       tbody.appendChild(tr);
     });
 
     table.hidden=false;
-    status.textContent=`Showing ${records.length} articles (updated ${dayjs().format("HH:mm")})`;
-
-    // Clear search field and reset filtering
+    statusEl.textContent=`Showing ${records.length} articles (updated ${dayjs().format("HH:mm")})`;
     clearSearch();
-  }catch(err){ // Catch errors from Promise.allSettled or sorting/rendering
+  }catch(err){
     console.error("Error during fetchNews execution:", err);
-    status.textContent="Error fetching data. Check console.";
+    statusEl.textContent="Error fetching data. Check console.";
     noResultsDiv.textContent = "An error occurred while fetching news.";
     noResultsDiv.style.display = "block";
     table.hidden = true;
   }finally{
     btn.disabled=false;
-    // Ensure filter state is correct even after errors
     filterArticles();
   }
 }
 
 /* ───────── TABLE SORTING ───────── */
 $all("th").forEach((th, headerIndex) => {
-    // Disable sorting for the new 'AI Overview' column
-    if (headerIndex === 3) { // 0: Date, 1: Source, 2: Title, 3: AI Overview
+    if (headerIndex === 3) { 
         th.style.cursor = 'default';
         return;
     }
-
     th.onclick = () => {
         const tableBody = $("#news tbody");
-        if (!tableBody) return; // Ensure tbody exists
-
+        if (!tableBody) return;
         const currentRows = Array.from(tableBody.rows);
         const isAscending = th.textContent.includes("▲");
-        const sortDirection = isAscending ? -1 : 1; // Toggle direction
-
+        const sortDirection = isAscending ? -1 : 1;
         currentRows.sort((rowA, rowB) => {
             const cellA = rowA.cells[headerIndex]?.innerText || '';
             const cellB = rowB.cells[headerIndex]?.innerText || '';
-
-            // Date sort (index 0)
             if (headerIndex === 0) {
-                // Use Date objects for reliable comparison
                 const dateA = dayjs(cellA, "YYYY-MM-DD").toDate();
                 const dateB = dayjs(cellB, "YYYY-MM-DD").toDate();
                 if (dateA < dateB) return -1 * sortDirection;
                 if (dateA > dateB) return 1 * sortDirection;
                 return 0;
-            } else {
-                // Default string sort for Source (1) and Title (2)
+            } else { 
                 return cellA.localeCompare(cellB) * sortDirection;
             }
         });
-
-        // Re-append sorted rows
         currentRows.forEach(row => tableBody.appendChild(row));
-
-        // Update header arrows
         $all("th").forEach((header, idx) => {
-            // Skip the AI Overview header
              if (idx !== 3) {
                  header.textContent = header.textContent.replace(/[▲▼]/, "").trim();
              }
         });
          th.textContent += (sortDirection === 1 ? " ▲" : " ▼");
-
-
-        // Re-apply search filter after sorting (important!)
         filterArticles();
     };
 });
